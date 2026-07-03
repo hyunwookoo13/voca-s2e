@@ -32,6 +32,26 @@ class GoalAdapterEvaluationRunnerTest(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             self.assertTrue(output_path.exists())
 
+    def test_main_can_write_diagnostics_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "eval.json"
+            diagnostics_path = Path(temp_dir) / "diagnostics.json"
+
+            with redirect_stdout(StringIO()):
+                exit_code = main(
+                    [
+                        "--output",
+                        str(output_path),
+                        "--diagnostics-output",
+                        str(diagnostics_path),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+            self.assertEqual(diagnostics["total_diagnostics"], 4)
+            self.assertEqual(diagnostics["detection_rate"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
