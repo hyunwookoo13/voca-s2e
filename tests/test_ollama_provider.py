@@ -3,8 +3,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from goal_adapter.ollama_provider import OllamaVLMConfig, OllamaVLMProvider
+from goal_adapter.ollama_provider import OllamaVLMConfig, OllamaVLMError, OllamaVLMProvider, _post_json
 from goal_adapter.schema import ActionType
 
 
@@ -66,10 +67,19 @@ class OllamaVLMProviderTest(unittest.TestCase):
                     },
                 }
             )
+            raw_decision = provider.generate_raw_decision(
+                {
+                    "target_type": "object_point",
+                    "high_level_target": {"label": "chair"},
+                    "current_rgb": str(image_path),
+                    "progress_state": "normal",
+                }
+            )
 
         self.assertEqual(output.action_type, ActionType.NAVIGATE)
         self.assertEqual(output.refined_goal_xy, [1.2, -0.4])
-        self.assertEqual(len(http_post.calls), 1)
+        self.assertIn('"action_type": "NAVIGATE"', raw_decision)
+        self.assertEqual(len(http_post.calls), 2)
         call = http_post.calls[0]
         self.assertEqual(call["endpoint"], "http://localhost:11434/api/chat")
         self.assertEqual(call["timeout_seconds"], 9.0)
@@ -83,7 +93,14 @@ class OllamaVLMProviderTest(unittest.TestCase):
             [base64.b64encode(b"fake-image-bytes").decode("ascii")],
         )
         self.assertIn("format", payload)
-        self.assertEqual(payload["options"]["temperature"], 1.0)
+        self.assertEqual(payload["options"]["temperature"], 0.0)
+        self.assertEqual(payload["options"]["num_predict"], 512)
+        self.assertIs(payload["think"], False)
+
+    def test_post_json_wraps_timeout_as_ollama_error(self):
+        with patch("urllib.request.urlopen", side_effect=TimeoutError("timed out")):
+            with self.assertRaisesRegex(OllamaVLMError, "timed out"):
+                _post_json("http://localhost:11434/api/chat", {"model": "gemma4:26b"}, 0.01)
 
 
 if __name__ == "__main__":

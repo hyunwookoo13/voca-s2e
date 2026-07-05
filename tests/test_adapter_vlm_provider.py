@@ -39,6 +39,49 @@ class GoalAdapterVLMProviderTest(unittest.TestCase):
         self.assertIsInstance(provider.inputs[0], GoalAdapterInput)
         self.assertEqual(provider.inputs[0].target_type.value, "object_point")
 
+    def test_refine_snaps_vlm_navigation_to_navigable_candidate(self):
+        provider_output = GoalAdapterOutput(
+            refined_goal_xy=[10.9, -6.4],
+            selected_image_point=[88, 48],
+            action_type=ActionType.NAVIGATE,
+            reasoning="The object center is visible.",
+            confidence=Confidence.HIGH,
+        )
+        adapter = GoalAdapter(decision_provider=RecordingDecisionProvider(provider_output))
+
+        output = adapter.refine(
+            {
+                "target_type": "object_point",
+                "high_level_target": {
+                    "object_label": "target object",
+                    "coarse_image_point": [88, 48],
+                },
+                "current_rgb": "frames/current.png",
+                "memory_summary": {
+                    "candidate_waypoints": [
+                        {
+                            "goal_xy": [10.5, -6.1],
+                            "image_point": [88, 70],
+                            "navigable": True,
+                            "score": 0.92,
+                            "rationale": "object-front navigable floor point",
+                        },
+                        {
+                            "goal_xy": [10.9, -6.4],
+                            "image_point": [88, 48],
+                            "navigable": False,
+                            "score": 0.18,
+                            "rationale": "visual object center is not a floor waypoint",
+                        },
+                    ],
+                },
+            }
+        )
+
+        self.assertEqual(output.refined_goal_xy, [10.5, -6.1])
+        self.assertEqual(output.selected_image_point, [88, 70])
+        self.assertIn("safety", output.reasoning.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

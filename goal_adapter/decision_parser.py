@@ -12,7 +12,7 @@ class VLMDecisionParseError(ValueError):
 
 
 def parse_vlm_decision(raw_decision: str | Mapping[str, Any]) -> GoalAdapterOutput:
-    payload = _coerce_payload(raw_decision)
+    payload = _normalize_payload(_coerce_payload(raw_decision))
     try:
         return GoalAdapterOutput(
             refined_goal_xy=payload.get("refined_goal_xy"),
@@ -50,3 +50,40 @@ def _extract_json_object(text: str) -> Any:
         if isinstance(payload, dict):
             return payload
     raise VLMDecisionParseError("No JSON object found in VLM decision text")
+
+
+def _normalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    if normalized.get("refined_goal_xy") is None:
+        refined_goal_xy = _first_non_null(
+            normalized,
+            (
+                "refined_goal_calibrated_xy",
+                "refined_goal_nav_xy",
+                "local_goal_xy",
+                "goal_xy",
+            ),
+        )
+        if refined_goal_xy is not None:
+            normalized["refined_goal_xy"] = refined_goal_xy
+
+    if normalized.get("selected_image_point") is None:
+        selected_image_point = _first_non_null(
+            normalized,
+            (
+                "selected_image_post_point",
+                "selected_action_point",
+                "selected_pixel",
+                "image_point",
+            ),
+        )
+        if selected_image_point is not None:
+            normalized["selected_image_point"] = selected_image_point
+    return normalized
+
+
+def _first_non_null(payload: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if key in payload and payload[key] is not None:
+            return payload[key]
+    return None
