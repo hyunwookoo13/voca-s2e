@@ -26,9 +26,11 @@ class OllamaVLMConfig:
     model: str = "gemma4:26b"
     endpoint: str = "http://localhost:11434/api/chat"
     timeout_seconds: float = 120.0
-    temperature: float = 1.0
+    temperature: float = 0.0
     top_p: float = 0.95
     top_k: int = 64
+    num_predict: int = 512
+    think: bool = False
     response_format: str = "json"
 
 
@@ -42,6 +44,9 @@ class OllamaVLMProvider:
         self._http_post = http_post or _post_json
 
     def decide(self, input_json: GoalAdapterInput | Mapping[str, Any]) -> GoalAdapterOutput:
+        return parse_vlm_decision(self.generate_raw_decision(input_json))
+
+    def generate_raw_decision(self, input_json: GoalAdapterInput | Mapping[str, Any]) -> str:
         adapter_input = GoalAdapterInput.from_json(input_json)
         prompt = build_vlm_decision_prompt(adapter_input)
         response = self._http_post(
@@ -49,7 +54,7 @@ class OllamaVLMProvider:
             self._payload(prompt.system, prompt.user, prompt.image_paths),
             self.config.timeout_seconds,
         )
-        return parse_vlm_decision(_response_content(response))
+        return _response_content(response)
 
     def _payload(self, system_prompt: str, user_prompt: str, image_paths: list[str]) -> dict[str, Any]:
         user_message: dict[str, Any] = {
@@ -64,6 +69,7 @@ class OllamaVLMProvider:
             "model": self.config.model,
             "stream": False,
             "format": self.config.response_format,
+            "think": self.config.think,
             "messages": [
                 {
                     "role": "system",
@@ -75,6 +81,7 @@ class OllamaVLMProvider:
                 "temperature": self.config.temperature,
                 "top_p": self.config.top_p,
                 "top_k": self.config.top_k,
+                "num_predict": self.config.num_predict,
             },
         }
 
@@ -105,6 +112,8 @@ def _post_json(endpoint: str, payload: Mapping[str, Any], timeout_seconds: float
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             raw_body = response.read().decode("utf-8")
+    except TimeoutError as exc:
+        raise OllamaVLMError(f"Ollama request timed out: {exc}") from exc
     except urllib.error.URLError as exc:
         raise OllamaVLMError(f"Ollama request failed: {exc}") from exc
 

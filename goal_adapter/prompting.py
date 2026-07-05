@@ -66,7 +66,19 @@ def _system_prompt() -> str:
         "floor point, not the object's visual center.\n"
         "Use sparse memory as context: avoid repeated failed goals, account "
         "for progress_state and s2e_status, and prefer navigable candidate "
-        "waypoints when they are visually and semantically consistent."
+        "waypoints when they are visually and semantically consistent.\n\n"
+        "Decision policy:\n"
+        "- If target_type is missing_point or progress_state is tracking_loss, "
+        "choose LOOK_AROUND unless a fresh reliable candidate waypoint is "
+        "visible in the current input.\n"
+        "- If progress_state is blocked, low_progress, or repeated_view, or "
+        "s2e_status is failed, collision, low_confidence, or no_valid_trajectory, "
+        "choose RESELECT_GOAL and avoid every failed_goal_xy entry.\n"
+        "- If you select a candidate_waypoints item, copy its goal_xy exactly "
+        "into refined_goal_xy and copy its image_point into selected_image_point "
+        "when present.\n"
+        "- Use exactly the schema keys shown above. Do not invent aliases such "
+        "as calibrated_goal, post_point, or target_xy."
     )
 
 

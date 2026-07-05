@@ -1,0 +1,8 @@
+# Local skill/session state
+.superpowers/
+
+# Generated benchmark outputs and visual reports
+reports/
+
+# Local reference material supplied for analysis
+md/

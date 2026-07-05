@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Protocol
 
 from goal_adapter.baseline import refine_with_baseline_rules
+from goal_adapter.safety import enforce_navigation_safety
 from goal_adapter.schema import (
     GoalAdapterConfig,
     GoalAdapterInput,
@@ -34,6 +35,12 @@ class GoalAdapter:
         )
 
         if self.decision_provider is not None:
-            return self.decision_provider.decide(adapter_input)
+            return enforce_navigation_safety(
+                adapter_input,
+                self.decision_provider.decide(adapter_input),
+            )
 
-        return refine_with_baseline_rules(adapter_input, self.config.default_goal_xy)
+        return enforce_navigation_safety(
+            adapter_input,
+            refine_with_baseline_rules(adapter_input, self.config.default_goal_xy),
+        )

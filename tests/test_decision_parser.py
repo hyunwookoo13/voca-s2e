@@ -43,6 +43,22 @@ class VLMDecisionParserTest(unittest.TestCase):
         self.assertEqual(output.action_type, ActionType.LOOK_AROUND)
         self.assertIsNone(output.refined_goal_xy)
 
+    def test_parses_common_vlm_field_aliases(self):
+        output = parse_vlm_decision(
+            {
+                "action_type": "RESELECT_GOAL",
+                "refined_goal_calibrated_xy": [11.25, -5.35],
+                "selected_image_post_point": [126, 52],
+                "controller_action": None,
+                "reasoning": "The previous local goal is blocked, so select a new candidate.",
+                "confidence": "high",
+            }
+        )
+
+        self.assertEqual(output.action_type, ActionType.RESELECT_GOAL)
+        self.assertEqual(output.refined_goal_xy, [11.25, -5.35])
+        self.assertEqual(output.selected_image_point, [126, 52])
+
     def test_parses_stop_or_direct_controller_decision_without_goal(self):
         output = parse_vlm_decision(
             {
