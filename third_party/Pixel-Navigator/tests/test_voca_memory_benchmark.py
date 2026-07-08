@@ -272,6 +272,18 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["episodes"][0]["initial_distance_to_goal"], 3.0)
             self.assertEqual(summary["episodes"][0]["distance_to_goal_delta"], 2.8)
 
+    def test_pointnav_sensor_goal_source_projects_relative_goal_to_map_frame(self):
+        from nav_memory_qwen.schema import RobotState
+        from voca_memory_benchmark import _pointnav_goal_map_xy_from_observation
+
+        state = RobotState(map_xy=(1.0, 2.0), heading_rad=np.deg2rad(30.0), position_xyz=(1.0, 0.0, 2.0))
+        obs = {"pointgoal_with_gps_compass": np.asarray([2.0, np.deg2rad(60.0)], dtype=np.float32)}
+
+        goal_xy = _pointnav_goal_map_xy_from_observation(obs, state, fallback_goal_map_xy=(0.0, 0.0))
+
+        self.assertAlmostEqual(goal_xy[0], 1.0, places=5)
+        self.assertAlmostEqual(goal_xy[1], 4.0, places=5)
+
     def test_pointnav_benchmark_respects_low_level_env_step_budget(self):
         from voca_memory_benchmark import run_pointnav_memory_benchmark
         import tempfile

@@ -683,6 +683,7 @@ def run_pointnav_memory_benchmark(
     write_videos: bool = False,
     video_fps: int = 4,
     memory_video_fps: int = 2,
+    pointnav_goal_source: str = "sensor",
     voca_root: str | Path = DEFAULT_VOCA_ROOT,
 ) -> dict[str, Any]:
     ensure_voca_imports(voca_root)
@@ -702,7 +703,7 @@ def run_pointnav_memory_benchmark(
         initial_distance_to_goal = _metric_float(initial_metrics, "distance_to_goal")
         episode = getattr(env, "current_episode", None)
         goal_position = _pointnav_goal_position(episode)
-        goal_map_xy = (float(goal_position[0]), float(goal_position[2]))
+        episode_goal_map_xy = (float(goal_position[0]), float(goal_position[2]))
         episode_id = str(getattr(episode, "episode_id", f"episode_{episode_index:04d}"))
         scene_id = str(getattr(episode, "scene_id", "unknown_scene"))
         backend = HabitatEnvMemoryBackend(
@@ -732,6 +733,16 @@ def run_pointnav_memory_benchmark(
         for step_index in range(int(max_agent_steps)):
             if getattr(env, "episode_over", False):
                 break
+            if pointnav_goal_source == "sensor":
+                goal_map_xy = _pointnav_goal_map_xy_from_observation(
+                    backend._last_obs,
+                    backend.get_robot_state(),
+                    fallback_goal_map_xy=episode_goal_map_xy,
+                )
+            elif pointnav_goal_source == "episode":
+                goal_map_xy = episode_goal_map_xy
+            else:
+                raise ValueError(f"unsupported pointnav_goal_source: {pointnav_goal_source}")
             step_result = agent.step(goal_map_xy=goal_map_xy, step_index=step_index)
             if step_result.action == "stop" and not getattr(env, "episode_over", False):
                 backend.stop()
@@ -763,7 +774,8 @@ def run_pointnav_memory_benchmark(
             "episode_id": episode_id,
             "scene_id": scene_id,
             "goal_position_xyz": _float_list(goal_position),
-            "goal_map_xy": [float(goal_map_xy[0]), float(goal_map_xy[1])],
+            "goal_map_xy": [float(episode_goal_map_xy[0]), float(episode_goal_map_xy[1])],
+            "pointnav_goal_source": pointnav_goal_source,
             "habitat_metrics": metrics,
             "success": _metric_float(metrics, "success"),
             "spl": _metric_float(metrics, "spl"),
@@ -1043,6 +1055,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--heuristic-y-ratio", type=float, default=0.625)
     parser.add_argument("--bearing-rotate-threshold-deg", type=float, default=25.0)
     parser.add_argument("--success-distance-m", type=float, default=None)
+    parser.add_argument("--pointnav-goal-source", choices=["sensor", "episode"], default="sensor")
     parser.add_argument("--write-videos", action="store_true")
     parser.add_argument("--video-fps", type=int, default=4)
     parser.add_argument("--memory-video-fps", type=int, default=2)
@@ -1077,6 +1090,7 @@ def main(argv: list[str] | None = None) -> int:
                 write_videos=args.write_videos,
                 video_fps=args.video_fps,
                 memory_video_fps=args.memory_video_fps,
+                pointnav_goal_source=args.pointnav_goal_source,
                 voca_root=args.voca_root,
             )
         elif args.task == "pointnav":
@@ -1103,6 +1117,7 @@ def main(argv: list[str] | None = None) -> int:
                 write_videos=args.write_videos,
                 video_fps=args.video_fps,
                 memory_video_fps=args.memory_video_fps,
+                pointnav_goal_source=args.pointnav_goal_source,
                 voca_root=args.voca_root,
             )
         else:
@@ -1194,6 +1209,30 @@ def _pointnav_goal_position(episode: Any) -> np.ndarray:
     if position is None:
         raise ValueError("PointNav goal has no position")
     return np.asarray(position, dtype=np.float64).reshape(3)
+
+
+def _pointnav_goal_map_xy_from_observation(
+    obs: dict[str, Any],
+    robot_state: Any,
+    *,
+    fallback_goal_map_xy: tuple[float, float],
+) -> tuple[float, float]:
+    pointgoal = obs.get("pointgoal_with_gps_compass") if isinstance(obs, dict) else None
+    if pointgoal is None:
+        return fallback_goal_map_xy
+    values = np.asarray(pointgoal, dtype=np.float64).reshape(-1)
+    if values.size < 2:
+        return fallback_goal_map_xy
+    distance = float(values[0])
+    relative_bearing_rad = float(values[1])
+    if not np.isfinite(distance) or not np.isfinite(relative_bearing_rad):
+        return fallback_goal_map_xy
+    robot_x, robot_y = robot_state.map_xy
+    world_bearing = float(robot_state.heading_rad) + relative_bearing_rad
+    return (
+        float(robot_x + distance * math.cos(world_bearing)),
+        float(robot_y + distance * math.sin(world_bearing)),
+    )
 
 
 def _ensure_habitat_test_scene_alias() -> None:

@@ -26,6 +26,7 @@ run_one() {
   "heuristic_y_ratio": $y_ratio,
   "bearing_rotate_threshold_deg": $rotate_threshold,
   "max_pixelnav_steps": $max_pixelnav_steps,
+  "pointnav_goal_source": "sensor",
   "eval_episodes": $EPISODES,
   "max_env_steps": $MAX_ENV_STEPS,
   "max_agent_steps": $MAX_AGENT_STEPS
@@ -47,6 +48,7 @@ EOF
       --max-env-steps "$MAX_ENV_STEPS" \
       --max-agent-steps "$MAX_AGENT_STEPS" \
       --max-pixelnav-steps "$max_pixelnav_steps" \
+      --pointnav-goal-source sensor \
       --checkpoint "$CHECKPOINT" \
       --pixelnav-device "${PIXELNAV_DEVICE:-cpu}" \
       --pixelnav-policy "$policy" \
