@@ -62,12 +62,14 @@ class FakeHabitatEnv:
         self.sim.heading_rad = 0.0
         self.episode_over = False
         self.step_count = 0
+        self.step_actions = []
         self.metrics.update(success=0.0, spl=0.0, distance_to_goal=3.0)
         return {"rgb": np.full((48, 64, 3), 127, dtype=np.uint8)}
 
     def step(self, action):
         self.step_count += 1
         action = int(action)
+        self.step_actions.append(action)
         if action == 0:
             self.episode_over = True
             self.metrics.update(success=1.0, spl=0.8, distance_to_goal=0.2)
@@ -198,6 +200,26 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
                 self.assertEqual(outcome.moved_distance_m, 0.25)
                 self.assertEqual(float(env.sim.get_agent_state().position[0]), 0.25)
                 self.assertTrue(Path(outcome.raw["rollout_result_json"]).exists())
+
+    def test_backend_rotate_uses_habitat_turn_direction_convention(self):
+        from voca_memory_benchmark import HabitatEnvMemoryBackend
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakeHabitatEnv()
+            obs = env.reset()
+            backend = HabitatEnvMemoryBackend(
+                env=env,
+                initial_obs=obs,
+                output_dir=tmp,
+                pixelnav_policy=FakePixelNavPolicy(),
+                max_pixelnav_steps=4,
+            )
+
+            backend.rotate(30)
+            backend.rotate(-30)
+
+            self.assertEqual(env.step_actions, [2, 3])
 
     def test_backend_reports_unsupported_pixelnav_action_without_crashing(self):
         from voca_memory_benchmark import HabitatEnvMemoryBackend

@@ -225,7 +225,7 @@ class HabitatEnvMemoryBackend:
             )
 
         before = _position_xyz(self.env.sim.get_agent_state())
-        turn_action = 3 if yaw_deg > 0 else 2
+        turn_action = 2 if yaw_deg > 0 else 3
         requested_step_count = max(1, int(round(abs(yaw_deg) / max(self.turn_angle_deg, 1e-6))))
         actual_step_count = 0
         for _ in range(requested_step_count):
