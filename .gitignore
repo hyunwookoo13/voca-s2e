@@ -1,8 +1,26 @@
 # Local skill/session state
 .superpowers/
 
+# Python cache files
+__pycache__/
+*.pyc
+.DS_Store
+
 # Generated benchmark outputs and visual reports
-reports/
+/reports/
+
+# Vendored Pixel-Navigator runtime artifacts
+third_party/Pixel-Navigator/data
+third_party/Pixel-Navigator/checkpoints/*.pth
+third_party/Pixel-Navigator/checkpoints/*.pt
+third_party/Pixel-Navigator/checkpoints/*.ckpt
+third_party/Pixel-Navigator/assets/*.mp4
+third_party/Pixel-Navigator/assets/*.gif
+third_party/Pixel-Navigator/reports/**/*.json
+third_party/Pixel-Navigator/reports/**/*.csv
+third_party/Pixel-Navigator/reports/**/*.mp4
+third_party/Pixel-Navigator/reports/**/*.png
+third_party/Pixel-Navigator/reports/**/episode_*/
 
 # Local reference material supplied for analysis
 md/

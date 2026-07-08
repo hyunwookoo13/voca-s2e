@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+
+# Local dataset/checkpoint/runtime outputs are intentionally not vendored.
+data
+checkpoints/*.pth
+checkpoints/*.pt
+checkpoints/*.ckpt
+assets/*.mp4
+assets/*.gif
+reports/**/*.json
+reports/**/*.csv
+reports/**/*.mp4
+reports/**/*.png
+reports/**/episode_*/
