@@ -514,6 +514,33 @@ class PointNavBearingHeuristicVLMClient:
         )
 
 
+class ForwardOnlyPixelPolicy:
+    """Cheap local controller for PointNav ablation: keep moving forward."""
+
+    def reset(self, goal_image: np.ndarray, goal_mask: np.ndarray) -> None:
+        self.goal_image_shape = tuple(goal_image.shape)
+
+    def step(self, image: np.ndarray, collide: bool = False) -> tuple[int, np.ndarray]:
+        return 1, _rgb_array(image)
+
+
+class ReactiveForwardPixelPolicy:
+    """Forward controller with a simple turn-on-collision recovery."""
+
+    def __init__(self):
+        self.collision_turn_count = 0
+
+    def reset(self, goal_image: np.ndarray, goal_mask: np.ndarray) -> None:
+        self.collision_turn_count = 0
+
+    def step(self, image: np.ndarray, collide: bool = False) -> tuple[int, np.ndarray]:
+        if collide:
+            action = 2 if self.collision_turn_count % 2 == 0 else 3
+            self.collision_turn_count += 1
+            return action, _rgb_array(image)
+        return 1, _rgb_array(image)
+
+
 def run_objnav_memory_benchmark(
     *,
     env: Any,
@@ -603,7 +630,7 @@ def run_objnav_memory_benchmark(
         if memory_video_result:
             video_artifacts["memory_graph_video"] = memory_video_result.get("video_path")
             video_artifacts["memory_graph_video_summary_json"] = memory_video_result.get("summary_json")
-        metrics = _json_safe(dict(env.get_metrics()))
+        metrics = _compact_habitat_metrics(dict(env.get_metrics()))
         final_distance_to_goal = _metric_float(metrics, "distance_to_goal")
         record = {
             "episode_index": episode_index,
@@ -729,7 +756,7 @@ def run_pointnav_memory_benchmark(
         if memory_video_result:
             video_artifacts["memory_graph_video"] = memory_video_result.get("video_path")
             video_artifacts["memory_graph_video_summary_json"] = memory_video_result.get("summary_json")
-        metrics = _json_safe(dict(env.get_metrics()))
+        metrics = _compact_habitat_metrics(dict(env.get_metrics()))
         final_distance_to_goal = _metric_float(metrics, "distance_to_goal")
         record = {
             "episode_index": episode_index,
@@ -932,7 +959,19 @@ def _official_pointnav_config(dataset: str, *, eval_episodes: int, split: str = 
     return config
 
 
-def make_pixelnav_policy_factory(checkpoint: str | Path | None, device: str | None) -> Callable[[], Any]:
+def make_pixelnav_policy_factory(
+    checkpoint: str | Path | None,
+    device: str | None,
+    *,
+    kind: str = "checkpoint",
+) -> Callable[[], Any]:
+    if kind == "forward":
+        return lambda: ForwardOnlyPixelPolicy()
+    if kind == "reactive-forward":
+        return lambda: ReactiveForwardPixelPolicy()
+    if kind != "checkpoint":
+        raise ValueError(f"unsupported pixelnav policy kind: {kind}")
+
     def factory() -> Any:
         from constants import POLICY_CHECKPOINT
         from policy_agent import Policy_Agent
@@ -999,6 +1038,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--pixelnav-device", default=os.getenv("PIXELNAV_DEVICE"))
+    parser.add_argument("--pixelnav-policy", choices=["checkpoint", "forward", "reactive-forward"], default="checkpoint")
     parser.add_argument("--vlm", choices=["qwen", "heuristic", "pointnav-bearing"], default="qwen")
     parser.add_argument("--heuristic-y-ratio", type=float, default=0.625)
     parser.add_argument("--bearing-rotate-threshold-deg", type=float, default=25.0)
@@ -1022,7 +1062,11 @@ def main(argv: list[str] | None = None) -> int:
                 max_agent_steps=args.max_agent_steps,
                 max_env_steps=args.max_env_steps,
                 max_pixelnav_steps=args.max_pixelnav_steps,
-                pixelnav_policy_factory=make_pixelnav_policy_factory(args.checkpoint, args.pixelnav_device),
+                pixelnav_policy_factory=make_pixelnav_policy_factory(
+                    args.checkpoint,
+                    args.pixelnav_device,
+                    kind=args.pixelnav_policy,
+                ),
                 vlm_client_factory=make_vlm_client_factory(
                     args.vlm,
                     args.voca_root,
@@ -1044,7 +1088,11 @@ def main(argv: list[str] | None = None) -> int:
                 max_agent_steps=args.max_agent_steps,
                 max_env_steps=args.max_env_steps,
                 max_pixelnav_steps=args.max_pixelnav_steps,
-                pixelnav_policy_factory=make_pixelnav_policy_factory(args.checkpoint, args.pixelnav_device),
+                pixelnav_policy_factory=make_pixelnav_policy_factory(
+                    args.checkpoint,
+                    args.pixelnav_device,
+                    kind=args.pixelnav_policy,
+                ),
                 vlm_client_factory=make_vlm_client_factory(
                     args.vlm,
                     args.voca_root,
@@ -1066,7 +1114,11 @@ def main(argv: list[str] | None = None) -> int:
                 max_agent_steps=args.max_agent_steps,
                 max_env_steps=args.max_env_steps,
                 max_pixelnav_steps=args.max_pixelnav_steps,
-                pixelnav_policy_factory=make_pixelnav_policy_factory(args.checkpoint, args.pixelnav_device),
+                pixelnav_policy_factory=make_pixelnav_policy_factory(
+                    args.checkpoint,
+                    args.pixelnav_device,
+                    kind=args.pixelnav_policy,
+                ),
                 vlm_client_factory=make_vlm_client_factory(
                     args.vlm,
                     args.voca_root,
@@ -1162,6 +1214,23 @@ def _metric_float(metrics: dict[str, Any], key: str) -> float:
         return round(float(value), 6)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _compact_habitat_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
+    compact: dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key == "top_down_map" and isinstance(value, dict):
+            raw_map = value.get("map")
+            compact_map = {
+                "present": True,
+                "map_shape": list(np.asarray(raw_map).shape) if raw_map is not None else None,
+                "agent_map_coord": _json_safe(value.get("agent_map_coord")),
+                "agent_angle": _json_safe(value.get("agent_angle")),
+            }
+            compact[key] = compact_map
+        else:
+            compact[key] = _json_safe(value)
+    return compact
 
 
 def _topdown_frame_from_metrics(metrics: dict[str, Any]) -> np.ndarray | None:

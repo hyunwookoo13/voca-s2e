@@ -243,7 +243,8 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["aggregate"]["mean_distance_to_goal_delta"], 2.8)
             self.assertEqual(summary["episodes"][0]["initial_distance_to_goal"], 3.0)
             self.assertEqual(summary["episodes"][0]["distance_to_goal_delta"], 2.8)
-            self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["map"], [[0, 0], [0, 0]])
+            self.assertTrue(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["present"])
+            self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["map_shape"], [2, 2])
             self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["agent_map_coord"], [1, 1])
             self.assertGreaterEqual(summary["aggregate"]["mean_memory_nodes"], 1)
             self.assertTrue(Path(summary["episodes"][0]["memory_graph_json"]).exists())
@@ -436,6 +437,33 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
 
         self.assertIsInstance(client, PointNavBearingHeuristicVLMClient)
         self.assertEqual(client.y_ratio, 0.7)
+
+    def test_make_pixelnav_policy_factory_supports_forward_policy(self):
+        from voca_memory_benchmark import ForwardOnlyPixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="forward")()
+        image = np.full((16, 16, 3), 127, dtype=np.uint8)
+
+        policy.reset(image, np.zeros((16, 16), dtype=np.uint8))
+        action, overlay = policy.step(image, collide=False)
+
+        self.assertIsInstance(policy, ForwardOnlyPixelPolicy)
+        self.assertEqual(action, 1)
+        self.assertEqual(overlay.shape, image.shape)
+
+    def test_make_pixelnav_policy_factory_supports_reactive_forward_policy(self):
+        from voca_memory_benchmark import ReactiveForwardPixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="reactive-forward")()
+        image = np.full((16, 16, 3), 127, dtype=np.uint8)
+
+        policy.reset(image, np.zeros((16, 16), dtype=np.uint8))
+        action_clear, _ = policy.step(image, collide=False)
+        action_collide, _ = policy.step(image, collide=True)
+
+        self.assertIsInstance(policy, ReactiveForwardPixelPolicy)
+        self.assertEqual(action_clear, 1)
+        self.assertIn(action_collide, {2, 3})
 
 
 if __name__ == "__main__":
