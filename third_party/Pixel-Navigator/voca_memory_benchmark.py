@@ -142,6 +142,26 @@ class HabitatEnvMemoryBackend:
         self.env_step_count = 0
         self.env_step_budget_exhausted = False
         self.video_recorder = video_recorder
+        self.pointnav_goal_distance_m: float | None = None
+        self.pointnav_success_distance_m = 0.20
+        self.low_level_forward_step_m = 0.25
+        if hasattr(self.pixelnav_policy, "bind_env"):
+            self.pixelnav_policy.bind_env(env)
+
+    def _distance_aware_rollout_step_limit(self) -> int:
+        if self.pointnav_goal_distance_m is None:
+            return self.max_pixelnav_steps
+        try:
+            distance = float(self.pointnav_goal_distance_m)
+        except (TypeError, ValueError):
+            return self.max_pixelnav_steps
+        if not math.isfinite(distance):
+            return self.max_pixelnav_steps
+        remaining_clearance = distance - self.pointnav_success_distance_m
+        if remaining_clearance <= 0.0:
+            return 0
+        near_goal_limit = max(1, int(math.floor(remaining_clearance / self.low_level_forward_step_m)))
+        return min(self.max_pixelnav_steps, near_goal_limit)
 
     def _can_step_env(self) -> bool:
         if self.max_env_steps is None:
@@ -272,7 +292,8 @@ class HabitatEnvMemoryBackend:
         stopped_by_policy = False
         unsupported_action = None
 
-        for step_index in range(self.max_pixelnav_steps):
+        rollout_step_limit = self._distance_aware_rollout_step_limit()
+        for step_index in range(rollout_step_limit):
             if getattr(self.env, "episode_over", False):
                 break
             if not self._can_step_env():
@@ -280,7 +301,14 @@ class HabitatEnvMemoryBackend:
             obs_rgb = _rgb_from_obs(self._last_obs)
             collision_before = bool(getattr(self.env.sim, "previous_step_collided", False))
             position_before = _position_xyz(self.env.sim.get_agent_state())
-            action, overlay = self.pixelnav_policy.step(obs_rgb, collide=collision_before)
+            if hasattr(self.pixelnav_policy, "step_from_observation"):
+                action, overlay = self.pixelnav_policy.step_from_observation(
+                    self._last_obs,
+                    obs_rgb,
+                    collide=collision_before,
+                )
+            else:
+                action, overlay = self.pixelnav_policy.step(obs_rgb, collide=collision_before)
             action = int(action)
             overlay_path = rollout_dir / f"overlay_{step_index:03d}.png"
             _write_rgb_png(_rgb_array(overlay), overlay_path)
@@ -343,6 +371,8 @@ class HabitatEnvMemoryBackend:
                 "env_step_budget_exhausted": self.env_step_budget_exhausted,
                 "env_steps": self.env_step_count,
                 "max_env_steps": self.max_env_steps,
+                "rollout_step_limit": rollout_step_limit,
+                "pointnav_goal_distance_m": self.pointnav_goal_distance_m,
             },
             "start_position_xyz": _float_list(start_position),
             "final_position_xyz": _float_list(final_position),
@@ -454,7 +484,7 @@ class PointNavBearingHeuristicVLMClient:
         y_ratio: float = 0.625,
         rotate_threshold_deg: float = 25.0,
         max_rotate_deg: float = 90.0,
-        stop_distance_m: float = 0.4,
+        stop_distance_m: float = 0.2,
         fallback: Any | None = None,
         voca_root: str | Path = DEFAULT_VOCA_ROOT,
     ):
@@ -464,6 +494,8 @@ class PointNavBearingHeuristicVLMClient:
         self.max_rotate_deg = float(max_rotate_deg)
         self.stop_distance_m = float(stop_distance_m)
         self.fallback = fallback or PixelNavFriendlyHeuristicVLMClient(y_ratio=y_ratio, voca_root=voca_root)
+        self.collision_recovery_turn_index = 0
+        self.collision_recovery_forward_steps = 0
 
     def decide(self, vlm_input: dict[str, Any]) -> dict[str, Any]:
         from nav_memory_qwen.schema import make_go_output, make_rotate_output, make_stop_output, normalize_angle_deg
@@ -480,15 +512,6 @@ class PointNavBearingHeuristicVLMClient:
             output["reasoning"]["short_text"] = f"PointNav goal within {self.stop_distance_m:.2f} m stop distance"
             return output
 
-        if abs(bearing) > self.rotate_threshold_deg:
-            yaw = max(-self.max_rotate_deg, min(self.max_rotate_deg, bearing))
-            output = make_rotate_output(yaw, reason="R01_GOAL_OUTSIDE_CURRENT_VIEW", confidence="medium")
-            output["reasoning"]["short_text"] = (
-                f"PointNav bearing-first rotate: goal bearing {bearing:.1f} deg exceeds "
-                f"{self.rotate_threshold_deg:.1f} deg threshold"
-            )
-            return output
-
         obs = vlm_input.get("observation", {}) if isinstance(vlm_input.get("observation"), dict) else {}
         width = int(obs.get("image_width", 640) or 640)
         height = int(obs.get("image_height", 480) or 480)
@@ -498,19 +521,62 @@ class PointNavBearingHeuristicVLMClient:
         )
         u = width // 2
         v = max(0, min(height - 1, int(round(height * self.y_ratio))))
-        return make_go_output(
-            view_id=int(front_view.get("view_id", 0)),
-            view_type="front",
-            point_px=(u, v),
-            width=width,
-            height=height,
-            decision_reason="G02_VISIBLE_FLOOR_TOWARD_GOAL",
-            goal_reason="F02_VISIBLE_FLOOR_TOWARD_GOAL",
-            short_text=(
+
+        def make_front_go(short_text: str, confidence: str = "medium") -> dict[str, Any]:
+            return make_go_output(
+                view_id=int(front_view.get("view_id", 0)),
+                view_type="front",
+                point_px=(u, v),
+                width=width,
+                height=height,
+                decision_reason="G02_VISIBLE_FLOOR_TOWARD_GOAL",
+                goal_reason="F02_VISIBLE_FLOOR_TOWARD_GOAL",
+                short_text=short_text,
+                confidence=confidence,
+            )
+
+        memory = vlm_input.get("memory", {}) if isinstance(vlm_input.get("memory"), dict) else {}
+        runtime_state = memory.get("runtime_state", {}) if isinstance(memory.get("runtime_state"), dict) else {}
+        last_outcome = (
+            runtime_state.get("last_action_outcome", {})
+            if isinstance(runtime_state.get("last_action_outcome"), dict)
+            else {}
+        )
+        last_collision = bool(last_outcome.get("collision"))
+        last_moved = float(last_outcome.get("moved_distance_m", 999.0) or 0.0)
+        if self.collision_recovery_forward_steps > 0:
+            self.collision_recovery_forward_steps -= 1
+            return make_front_go(
+                (
+                    f"collision recovery forward after escape turn: "
+                    f"bearing {bearing:.1f} deg, point y_ratio={self.y_ratio:.3f}"
+                ),
+                confidence="low",
+            )
+        if last_collision and last_moved < 0.20:
+            yaw = 60.0 if self.collision_recovery_turn_index % 2 == 0 else -60.0
+            self.collision_recovery_turn_index += 1
+            self.collision_recovery_forward_steps = 1
+            output = make_rotate_output(yaw, reason="R03_COLLISION_RECOVERY", confidence="low")
+            output["reasoning"]["short_text"] = (
+                f"collision recovery turn after low-progress collision: moved {last_moved:.3f} m"
+            )
+            return output
+
+        if abs(bearing) > self.rotate_threshold_deg:
+            yaw = max(-self.max_rotate_deg, min(self.max_rotate_deg, bearing))
+            output = make_rotate_output(yaw, reason="R01_GOAL_OUTSIDE_CURRENT_VIEW", confidence="medium")
+            output["reasoning"]["short_text"] = (
+                f"PointNav bearing-first rotate: goal bearing {bearing:.1f} deg exceeds "
+                f"{self.rotate_threshold_deg:.1f} deg threshold"
+            )
+            return output
+
+        return make_front_go(
+            (
                 f"PointNav bearing-aligned front goal: bearing {bearing:.1f} deg, "
                 f"point y_ratio={self.y_ratio:.3f}"
-            ),
-            confidence="medium",
+            )
         )
 
 
@@ -539,6 +605,85 @@ class ReactiveForwardPixelPolicy:
             self.collision_turn_count += 1
             return action, _rgb_array(image)
         return 1, _rgb_array(image)
+
+
+class PointGoalReactivePixelPolicy:
+    """PointNav ablation controller that reads the official pointgoal sensor."""
+
+    def __init__(self, *, success_distance_m: float = 0.2, turn_threshold_deg: float = 15.0):
+        self.success_distance_m = float(success_distance_m)
+        self.turn_threshold_deg = float(turn_threshold_deg)
+        self.collision_turn_count = 0
+
+    def reset(self, goal_image: np.ndarray, goal_mask: np.ndarray) -> None:
+        self.collision_turn_count = 0
+
+    def step_from_observation(self, obs: dict[str, Any], image: np.ndarray, collide: bool = False) -> tuple[int, np.ndarray]:
+        pointgoal = obs.get("pointgoal_with_gps_compass")
+        if pointgoal is None:
+            return 1, _rgb_array(image)
+        arr = np.asarray(pointgoal, dtype=np.float32).reshape(-1)
+        if arr.size < 2:
+            return 1, _rgb_array(image)
+        distance = float(arr[0])
+        bearing_deg = math.degrees(float(arr[1]))
+        if distance <= self.success_distance_m:
+            return 0, _rgb_array(image)
+        if collide:
+            action = 2 if self.collision_turn_count % 2 == 0 else 3
+            self.collision_turn_count += 1
+            return action, _rgb_array(image)
+        if abs(bearing_deg) > self.turn_threshold_deg:
+            # In this Habitat config, turn_left decreases the pointgoal bearing
+            # and turn_right increases it.
+            return (2 if bearing_deg > 0.0 else 3), _rgb_array(image)
+        return 1, _rgb_array(image)
+
+    def step(self, image: np.ndarray, collide: bool = False) -> tuple[int, np.ndarray]:
+        return 1, _rgb_array(image)
+
+
+class ShortestPathFollowerPixelPolicy:
+    """Oracle PointNav upper-bound policy using Habitat's navmesh follower."""
+
+    def __init__(self, *, goal_radius: float = 0.2):
+        self.goal_radius = float(goal_radius)
+        self.env = None
+        self.goal_position = None
+        self._follower = None
+
+    def bind_env(self, env: Any) -> None:
+        self.env = env
+        self._follower = None
+
+    def set_goal_position(self, goal_position: Sequence[float]) -> None:
+        self.goal_position = np.asarray(goal_position, dtype=np.float32)
+        self._follower = None
+
+    def reset(self, goal_image: np.ndarray, goal_mask: np.ndarray) -> None:
+        pass
+
+    def _ensure_follower(self) -> Any | None:
+        if self.env is None or self.goal_position is None:
+            return None
+        if self._follower is None:
+            from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+
+            self._follower = ShortestPathFollower(
+                self.env.sim,
+                goal_radius=self.goal_radius,
+                return_one_hot=False,
+            )
+        return self._follower
+
+    def step(self, image: np.ndarray, collide: bool = False) -> tuple[int, np.ndarray]:
+        follower = self._ensure_follower()
+        if follower is None:
+            return 1, _rgb_array(image)
+        action = follower.get_next_action(self.goal_position)
+        if action is None:
+            action = 0
+        return int(action), _rgb_array(image)
 
 
 def run_objnav_memory_benchmark(
@@ -719,6 +864,8 @@ def run_pointnav_memory_benchmark(
             video_recorder=video_recorder,
             voca_root=voca_root,
         )
+        if hasattr(backend.pixelnav_policy, "set_goal_position"):
+            backend.pixelnav_policy.set_goal_position(goal_position)
         vlm_client = vlm_client_factory()
         agent = NavMemoryAgent(
             robot=backend,
@@ -733,16 +880,21 @@ def run_pointnav_memory_benchmark(
         for step_index in range(int(max_agent_steps)):
             if getattr(env, "episode_over", False):
                 break
+            state_for_goal = backend.get_robot_state()
             if pointnav_goal_source == "sensor":
                 goal_map_xy = _pointnav_goal_map_xy_from_observation(
                     backend._last_obs,
-                    backend.get_robot_state(),
+                    state_for_goal,
                     fallback_goal_map_xy=episode_goal_map_xy,
                 )
             elif pointnav_goal_source == "episode":
                 goal_map_xy = episode_goal_map_xy
             else:
                 raise ValueError(f"unsupported pointnav_goal_source: {pointnav_goal_source}")
+            backend.pointnav_goal_distance_m = math.hypot(
+                float(goal_map_xy[0]) - float(state_for_goal.map_xy[0]),
+                float(goal_map_xy[1]) - float(state_for_goal.map_xy[1]),
+            )
             step_result = agent.step(goal_map_xy=goal_map_xy, step_index=step_index)
             if step_result.action == "stop" and not getattr(env, "episode_over", False):
                 backend.stop()
@@ -981,6 +1133,10 @@ def make_pixelnav_policy_factory(
         return lambda: ForwardOnlyPixelPolicy()
     if kind == "reactive-forward":
         return lambda: ReactiveForwardPixelPolicy()
+    if kind == "pointgoal-reactive":
+        return lambda: PointGoalReactivePixelPolicy()
+    if kind == "shortest-path":
+        return lambda: ShortestPathFollowerPixelPolicy()
     if kind != "checkpoint":
         raise ValueError(f"unsupported pixelnav policy kind: {kind}")
 
@@ -1050,7 +1206,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--pixelnav-device", default=os.getenv("PIXELNAV_DEVICE"))
-    parser.add_argument("--pixelnav-policy", choices=["checkpoint", "forward", "reactive-forward"], default="checkpoint")
+    parser.add_argument(
+        "--pixelnav-policy",
+        choices=["checkpoint", "forward", "reactive-forward", "pointgoal-reactive", "shortest-path"],
+        default="checkpoint",
+    )
     parser.add_argument("--vlm", choices=["qwen", "heuristic", "pointnav-bearing"], default="qwen")
     parser.add_argument("--heuristic-y-ratio", type=float, default=0.625)
     parser.add_argument("--bearing-rotate-threshold-deg", type=float, default=25.0)

@@ -64,6 +64,8 @@ run_one "bearing_checkpoint_y085_p8_r20" "checkpoint" "pointnav-bearing" 0.85 20
 run_one "bearing_forward_y075_p8_r25" "forward" "pointnav-bearing" 0.75 25 8
 run_one "bearing_reactive_forward_y075_p8_r25" "reactive-forward" "pointnav-bearing" 0.75 25 8
 run_one "bearing_reactive_forward_y075_p12_r20" "reactive-forward" "pointnav-bearing" 0.75 20 12
+run_one "bearing_pointgoal_reactive_y075_p12_r20" "pointgoal-reactive" "pointnav-bearing" 0.75 20 12
+run_one "oracle_shortest_path_y075_p12_r20" "shortest-path" "pointnav-bearing" 0.75 20 12
 
 /home/icra/micromamba/bin/micromamba run -r /home/icra/micromamba-root -n habitat \
   python scripts/summarize_pointnav_sweep.py "$ROOT" | tee "$ROOT/summary.log"
