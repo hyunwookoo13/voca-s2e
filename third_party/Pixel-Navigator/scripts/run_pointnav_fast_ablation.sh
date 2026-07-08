@@ -57,10 +57,10 @@ EOF
 
 cd /home/icra/voca-s2e/third_party/Pixel-Navigator
 
-run_one "checkpoint_smoke_y075_p8_r20" "checkpoint" "$CHECKPOINT_EPISODES" 8
 run_one "proposed_reactive_forward_y075_p12_r20" "reactive-forward" "$EPISODES" 12
 run_one "pointgoal_reactive_y075_p12_r20" "pointgoal-reactive" "$EPISODES" 12
 run_one "oracle_shortest_path_y075_p12_r20" "shortest-path" "$EPISODES" 12
+run_one "checkpoint_smoke_y075_p8_r20" "checkpoint" "$CHECKPOINT_EPISODES" 8
 
 /home/icra/micromamba/bin/micromamba run -r /home/icra/micromamba-root -n habitat \
   python scripts/summarize_pointnav_sweep.py "$ROOT" | tee "$ROOT/summary.log"
