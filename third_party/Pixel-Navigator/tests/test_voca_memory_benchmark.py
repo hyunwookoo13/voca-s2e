@@ -62,12 +62,14 @@ class FakeHabitatEnv:
         self.sim.heading_rad = 0.0
         self.episode_over = False
         self.step_count = 0
+        self.step_actions = []
         self.metrics.update(success=0.0, spl=0.0, distance_to_goal=3.0)
         return {"rgb": np.full((48, 64, 3), 127, dtype=np.uint8)}
 
     def step(self, action):
         self.step_count += 1
         action = int(action)
+        self.step_actions.append(action)
         if action == 0:
             self.episode_over = True
             self.metrics.update(success=1.0, spl=0.8, distance_to_goal=0.2)
@@ -116,6 +118,34 @@ class UnsupportedActionPixelPolicy:
 
     def step(self, image, collide=False):
         return 5, image
+
+
+class ObservationAwarePixelPolicy:
+    def __init__(self):
+        self.seen_observation = None
+
+    def reset(self, goal_image, goal_mask):
+        pass
+
+    def step(self, image, collide=False):
+        raise AssertionError("backend should call step_from_observation")
+
+    def step_from_observation(self, obs, image, collide=False):
+        self.seen_observation = obs
+        return 0, image
+
+
+class GoalAwarePixelPolicy(FakePixelNavPolicy):
+    def __init__(self):
+        super().__init__()
+        self.bound_env = None
+        self.goal_position = None
+
+    def bind_env(self, env):
+        self.bound_env = env
+
+    def set_goal_position(self, goal_position):
+        self.goal_position = list(goal_position)
 
 
 class CenterGoThenStopVLM:
@@ -199,6 +229,26 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
                 self.assertEqual(float(env.sim.get_agent_state().position[0]), 0.25)
                 self.assertTrue(Path(outcome.raw["rollout_result_json"]).exists())
 
+    def test_backend_rotate_uses_habitat_turn_direction_convention(self):
+        from voca_memory_benchmark import HabitatEnvMemoryBackend
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakeHabitatEnv()
+            obs = env.reset()
+            backend = HabitatEnvMemoryBackend(
+                env=env,
+                initial_obs=obs,
+                output_dir=tmp,
+                pixelnav_policy=FakePixelNavPolicy(),
+                max_pixelnav_steps=4,
+            )
+
+            backend.rotate(30)
+            backend.rotate(-30)
+
+            self.assertEqual(env.step_actions, [2, 3])
+
     def test_backend_reports_unsupported_pixelnav_action_without_crashing(self):
         from voca_memory_benchmark import HabitatEnvMemoryBackend
         import tempfile
@@ -218,6 +268,106 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
 
             self.assertFalse(outcome.success)
             self.assertEqual(outcome.raw["rollout"]["unsupported_action"], 5)
+
+    def test_backend_caps_rollout_steps_when_pointnav_goal_is_near(self):
+        from voca_memory_benchmark import ForwardOnlyPixelPolicy, HabitatEnvMemoryBackend
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakeHabitatEnv()
+            obs = env.reset()
+            backend = HabitatEnvMemoryBackend(
+                env=env,
+                initial_obs=obs,
+                output_dir=tmp,
+                pixelnav_policy=ForwardOnlyPixelPolicy(),
+                max_pixelnav_steps=12,
+            )
+            backend.pointnav_goal_distance_m = 0.60
+
+            outcome = backend.execute_waypoint(view_type="front", view_id=0, point_px=(32, 36), ttl_ms=1000)
+
+            self.assertEqual(len(outcome.raw["rollout"]["steps"]), 1)
+            self.assertEqual(outcome.moved_distance_m, 0.25)
+            self.assertEqual(env.step_count, 1)
+
+    def test_backend_uses_observation_aware_pixel_policy_hook(self):
+        from voca_memory_benchmark import HabitatEnvMemoryBackend
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakeHabitatEnv()
+            obs = env.reset()
+            policy = ObservationAwarePixelPolicy()
+            backend = HabitatEnvMemoryBackend(
+                env=env,
+                initial_obs=obs,
+                output_dir=tmp,
+                pixelnav_policy=policy,
+                max_pixelnav_steps=4,
+            )
+
+            backend.execute_waypoint(view_type="front", view_id=0, point_px=(32, 36), ttl_ms=1000)
+
+            self.assertIs(policy.seen_observation, backend._last_obs)
+
+    def test_backend_binds_env_to_goal_aware_pixel_policy(self):
+        from voca_memory_benchmark import HabitatEnvMemoryBackend
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakeHabitatEnv()
+            obs = env.reset()
+            policy = GoalAwarePixelPolicy()
+            HabitatEnvMemoryBackend(
+                env=env,
+                initial_obs=obs,
+                output_dir=tmp,
+                pixelnav_policy=policy,
+                max_pixelnav_steps=4,
+            )
+
+            self.assertIs(policy.bound_env, env)
+
+    def test_pointnav_benchmark_sets_distance_aware_rollout_cap(self):
+        from voca_memory_benchmark import ForwardOnlyPixelPolicy, run_pointnav_memory_benchmark
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = FakePointNavEnv()
+            result = run_pointnav_memory_benchmark(
+                env=env,
+                output_dir=tmp,
+                eval_episodes=1,
+                max_agent_steps=1,
+                max_pixelnav_steps=12,
+                max_env_steps=250,
+                pixelnav_policy_factory=ForwardOnlyPixelPolicy,
+                vlm_client_factory=CenterGoThenStopVLM,
+            )
+
+            summary = json.loads(Path(result["summary_json"]).read_text(encoding="utf-8"))
+            self.assertEqual(env.step_count, 3)
+            self.assertEqual(summary["episodes"][0]["env_steps"], 3)
+
+    def test_pointnav_benchmark_passes_goal_position_to_goal_aware_policy(self):
+        from voca_memory_benchmark import run_pointnav_memory_benchmark
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = GoalAwarePixelPolicy()
+            run_pointnav_memory_benchmark(
+                env=FakePointNavEnv(),
+                output_dir=tmp,
+                eval_episodes=1,
+                max_agent_steps=1,
+                max_pixelnav_steps=4,
+                max_env_steps=8,
+                pixelnav_policy_factory=lambda: policy,
+                vlm_client_factory=CenterGoThenStopVLM,
+            )
+
+            self.assertEqual(policy.goal_position, [1.0, 0.0, 0.0])
 
     def test_run_objnav_memory_benchmark_writes_official_metrics_and_memory_graph(self):
         from voca_memory_benchmark import run_objnav_memory_benchmark
@@ -243,7 +393,8 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["aggregate"]["mean_distance_to_goal_delta"], 2.8)
             self.assertEqual(summary["episodes"][0]["initial_distance_to_goal"], 3.0)
             self.assertEqual(summary["episodes"][0]["distance_to_goal_delta"], 2.8)
-            self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["map"], [[0, 0], [0, 0]])
+            self.assertTrue(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["present"])
+            self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["map_shape"], [2, 2])
             self.assertEqual(summary["episodes"][0]["habitat_metrics"]["top_down_map"]["agent_map_coord"], [1, 1])
             self.assertGreaterEqual(summary["aggregate"]["mean_memory_nodes"], 1)
             self.assertTrue(Path(summary["episodes"][0]["memory_graph_json"]).exists())
@@ -270,6 +421,18 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["aggregate"]["mean_distance_to_goal_delta"], 2.8)
             self.assertEqual(summary["episodes"][0]["initial_distance_to_goal"], 3.0)
             self.assertEqual(summary["episodes"][0]["distance_to_goal_delta"], 2.8)
+
+    def test_pointnav_sensor_goal_source_projects_relative_goal_to_map_frame(self):
+        from nav_memory_qwen.schema import RobotState
+        from voca_memory_benchmark import _pointnav_goal_map_xy_from_observation
+
+        state = RobotState(map_xy=(1.0, 2.0), heading_rad=np.deg2rad(30.0), position_xyz=(1.0, 0.0, 2.0))
+        obs = {"pointgoal_with_gps_compass": np.asarray([2.0, np.deg2rad(60.0)], dtype=np.float32)}
+
+        goal_xy = _pointnav_goal_map_xy_from_observation(obs, state, fallback_goal_map_xy=(0.0, 0.0))
+
+        self.assertAlmostEqual(goal_xy[0], 1.0, places=5)
+        self.assertAlmostEqual(goal_xy[1], 4.0, places=5)
 
     def test_pointnav_benchmark_respects_low_level_env_step_budget(self):
         from voca_memory_benchmark import run_pointnav_memory_benchmark
@@ -429,6 +592,81 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
         self.assertEqual(output["selected_image_point"], [128, 160])
         self.assertIn("bearing-aligned", output["reasoning"]["short_text"])
 
+    def test_pointnav_bearing_heuristic_does_not_stop_before_official_success_radius(self):
+        from voca_memory_benchmark import PointNavBearingHeuristicVLMClient
+
+        client = PointNavBearingHeuristicVLMClient(y_ratio=0.625, rotate_threshold_deg=25.0)
+        output = client.decide(
+            {
+                "task": {
+                    "task_mode": "PointNav",
+                    "coarse_goal": {"relative_bearing_deg": 0.0, "distance_m": 0.30},
+                },
+                "observation": {
+                    "image_width": 256,
+                    "image_height": 256,
+                    "views": [{"view_id": 0, "view_type": "front", "relative_heading_deg": 0.0}],
+                },
+                "memory": {"local_topology": {"candidate_exits": []}},
+            }
+        )
+
+        self.assertEqual(output["action"], "go")
+
+    def test_pointnav_bearing_heuristic_escapes_after_collision_before_realigning(self):
+        from voca_memory_benchmark import PointNavBearingHeuristicVLMClient
+
+        client = PointNavBearingHeuristicVLMClient(y_ratio=0.625, rotate_threshold_deg=25.0)
+        collision_output = client.decide(
+            {
+                "task": {
+                    "task_mode": "PointNav",
+                    "coarse_goal": {"relative_bearing_deg": 0.0, "distance_m": 5.0},
+                },
+                "observation": {
+                    "image_width": 256,
+                    "image_height": 256,
+                    "views": [{"view_id": 0, "view_type": "front", "relative_heading_deg": 0.0}],
+                },
+                "memory": {
+                    "runtime_state": {
+                        "last_action_outcome": {
+                            "action": "go",
+                            "collision": True,
+                            "moved_distance_m": 0.05,
+                        }
+                    }
+                },
+            }
+        )
+        recovery_output = client.decide(
+            {
+                "task": {
+                    "task_mode": "PointNav",
+                    "coarse_goal": {"relative_bearing_deg": 70.0, "distance_m": 5.0},
+                },
+                "observation": {
+                    "image_width": 256,
+                    "image_height": 256,
+                    "views": [{"view_id": 0, "view_type": "front", "relative_heading_deg": 0.0}],
+                },
+                "memory": {
+                    "runtime_state": {
+                        "last_action_outcome": {
+                            "action": "rotate",
+                            "collision": False,
+                            "moved_distance_m": 0.0,
+                        }
+                    }
+                },
+            }
+        )
+
+        self.assertEqual(collision_output["action"], "rotate")
+        self.assertEqual(abs(collision_output["control"]["rotate_yaw_deg"]), 60.0)
+        self.assertEqual(recovery_output["action"], "go")
+        self.assertIn("collision recovery", recovery_output["reasoning"]["short_text"])
+
     def test_make_vlm_client_factory_supports_pointnav_bearing(self):
         from voca_memory_benchmark import PointNavBearingHeuristicVLMClient, make_vlm_client_factory
 
@@ -436,6 +674,76 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
 
         self.assertIsInstance(client, PointNavBearingHeuristicVLMClient)
         self.assertEqual(client.y_ratio, 0.7)
+
+    def test_make_pixelnav_policy_factory_supports_forward_policy(self):
+        from voca_memory_benchmark import ForwardOnlyPixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="forward")()
+        image = np.full((16, 16, 3), 127, dtype=np.uint8)
+
+        policy.reset(image, np.zeros((16, 16), dtype=np.uint8))
+        action, overlay = policy.step(image, collide=False)
+
+        self.assertIsInstance(policy, ForwardOnlyPixelPolicy)
+        self.assertEqual(action, 1)
+        self.assertEqual(overlay.shape, image.shape)
+
+    def test_make_pixelnav_policy_factory_supports_reactive_forward_policy(self):
+        from voca_memory_benchmark import ReactiveForwardPixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="reactive-forward")()
+        image = np.full((16, 16, 3), 127, dtype=np.uint8)
+
+        policy.reset(image, np.zeros((16, 16), dtype=np.uint8))
+        action_clear, _ = policy.step(image, collide=False)
+        action_collide, _ = policy.step(image, collide=True)
+
+        self.assertIsInstance(policy, ReactiveForwardPixelPolicy)
+        self.assertEqual(action_clear, 1)
+        self.assertIn(action_collide, {2, 3})
+
+    def test_pointgoal_reactive_policy_uses_pointgoal_sensor(self):
+        from voca_memory_benchmark import PointGoalReactivePixelPolicy
+
+        policy = PointGoalReactivePixelPolicy(success_distance_m=0.2, turn_threshold_deg=15.0)
+        image = np.full((16, 16, 3), 127, dtype=np.uint8)
+        policy.reset(image, np.zeros((16, 16), dtype=np.uint8))
+
+        stop_action, _ = policy.step_from_observation(
+            {"pointgoal_with_gps_compass": np.asarray([0.1, 0.0], dtype=np.float32)},
+            image,
+        )
+        forward_action, _ = policy.step_from_observation(
+            {"pointgoal_with_gps_compass": np.asarray([1.0, 0.0], dtype=np.float32)},
+            image,
+        )
+        left_action, _ = policy.step_from_observation(
+            {"pointgoal_with_gps_compass": np.asarray([1.0, np.deg2rad(45.0)], dtype=np.float32)},
+            image,
+        )
+        right_action, _ = policy.step_from_observation(
+            {"pointgoal_with_gps_compass": np.asarray([1.0, np.deg2rad(-45.0)], dtype=np.float32)},
+            image,
+        )
+
+        self.assertEqual(stop_action, 0)
+        self.assertEqual(forward_action, 1)
+        self.assertEqual(left_action, 2)
+        self.assertEqual(right_action, 3)
+
+    def test_make_pixelnav_policy_factory_supports_pointgoal_reactive_policy(self):
+        from voca_memory_benchmark import PointGoalReactivePixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="pointgoal-reactive")()
+
+        self.assertIsInstance(policy, PointGoalReactivePixelPolicy)
+
+    def test_make_pixelnav_policy_factory_supports_shortest_path_policy(self):
+        from voca_memory_benchmark import ShortestPathFollowerPixelPolicy, make_pixelnav_policy_factory
+
+        policy = make_pixelnav_policy_factory(None, None, kind="shortest-path")()
+
+        self.assertIsInstance(policy, ShortestPathFollowerPixelPolicy)
 
 
 if __name__ == "__main__":
