@@ -2,7 +2,7 @@
 
 ## 1. One-line Summary
 
-본 문서는 VLM waypoint adapter가 사용할 memory 구조와 VLM prompt 주입 방식을 정의한다. 최종 방향은 선임님이 작성한 `/home/icra/voca-s2e/qwen_nav_memory_framework_v3`를 기준축으로 하며, memory는 raw trajectory나 image history가 아니라 **relative-pose topo-metric episodic memory graph with directional negative edges, VLM-grounded place recognition, live latest-node pose relation**으로 저장한다.
+본 문서는 VLM waypoint adapter가 사용할 memory 구조와 VLM prompt 주입 방식을 정의한다. 현재 구현 기준은 `/home/icra/voca-s2e/qwen_nav_memory_framework_v5`이며, memory는 raw trajectory나 image history가 아니라 **relative-pose topo-metric episodic memory graph with directional negative edges, VLM-grounded place recognition, live latest-node pose relation, backend-verified soft merge**로 저장한다.
 
 핵심은 다음과 같다.
 
@@ -98,7 +98,7 @@ Live latest-node pose relation:
 
 중요한 설계 선택은 **memory node에 global pose를 직접 저장하지 않는 것**이다. Robot state와 coarse goal은 VLM input에서 GPS/map-aligned 좌표계로 제공될 수 있지만, memory graph 자체는 node 간 relative pose를 중심으로 유지한다.
 
-v3에서 추가된 중요한 보완은 `T_latest_node_to_current_robot`이다. 로봇이 latest node를 만든 뒤 아직 새 node를 만들 정도로 멀리 가지 않았더라도 실제 로봇 pose는 계속 변한다. 따라서 candidate exit를 고를 때는 edge pose를 node frame 그대로 쓰지 않고, latest node 기준 현재 robot의 live relative pose를 반영해 **현재 robot frame**으로 변환한다. 이 값은 runtime state이며, node의 persistent global pose가 아니다.
+v5에서 유지되는 중요한 보완은 `T_latest_node_to_current_robot`이다. 로봇이 latest node를 만든 뒤 아직 새 node를 만들 정도로 멀리 가지 않았더라도 실제 로봇 pose는 계속 변한다. 따라서 candidate exit를 고를 때는 edge pose를 node frame 그대로 쓰지 않고, latest node 기준 현재 robot의 live relative pose를 반영해 **현재 robot frame**으로 변환한다. 이 값은 runtime state이며, node의 persistent global pose가 아니다.
 
 이렇게 하면 localization noise가 있더라도 다음과 같은 복원이 가능하다.
 
@@ -118,7 +118,7 @@ Framework의 graph serialization은 다음 정책을 갖는다.
 
 ```json
 {
-  "schema_version": "relative_topometric_memory_graph_v4",
+  "schema_version": "relative_topometric_memory_graph_v5",
   "pose_policy": {
     "node_global_pose_stored": false,
     "edge_pose_type": "relative_SE2",
@@ -152,7 +152,9 @@ Framework의 graph serialization은 다음 정책을 갖는다.
 
 이 graph는 VLM input의 `memory` field에 그대로 들어가지 않는다. 전체 graph는 내부 memory state이고, VLM prompt에는 `build_vlm_memory_context`로 만든 compact context만 들어간다.
 
-주의할 점은 디렉토리 기준 최종 framework는 `qwen_nav_memory_framework_v3`이지만, VLM에 들어가는 compact memory context schema는 `nav_memory_context_v4`라는 점이다.
+주의할 점은 VLM에 전체 graph 원본을 넣지 않고, `qwen_nav_memory_framework_v5`의 `MemoryGraph.build_vlm_memory_context()`가 만든 `nav_memory_context_v5` compact context만 넣는다는 점이다.
+
+`qwen_nav_memory_framework_v6`는 v5 graph memory를 대체하지 않고, GaP-lite policy sidecar를 ablation 옵션으로 추가한다. v6 context는 `nav_memory_context_v6`이며 `candidate_refs.exits`, `candidate_refs.revisits`, `nav_skill_cards`, `policy_harness_state`를 추가한다. VLM은 `go` action에서 가능하면 backend가 제안한 `selected_candidate_ref`를 함께 출력하고, backend는 이를 `validation_checkpoints`로 검증한다.
 
 ---
 
@@ -305,7 +307,7 @@ n1 -> n2 -> n3 path
   -> n1 기준 n3의 relative pose
 ```
 
-v3에서는 여기에 runtime live pose relation이 추가된다.
+v5에서는 여기에 runtime live pose relation이 추가된다.
 
 ```text
 Stored edge:
@@ -418,7 +420,7 @@ VLM prompt에는 전체 graph를 넣지 않는다. `MemoryGraph.build_vlm_memory
 
 ```json
 {
-  "schema_version": "nav_memory_context_v4",
+  "schema_version": "nav_memory_context_v5",
   "graph_summary": {
     "num_nodes": 5,
     "num_edges": 4,
@@ -480,7 +482,11 @@ VLM prompt에는 전체 graph를 넣지 않는다. `MemoryGraph.build_vlm_memory
     "incoming_edge_id": "e_00003"
   },
   "retrieved_memory_images": [],
-  "compressed_negative_memories": []
+  "compressed_negative_memories": [],
+  "loop_warning": {
+    "is_looping": false,
+    "repeated_branch_count": 0
+  }
 }
 ```
 
@@ -565,7 +571,7 @@ insufficient context:
   request_observation으로 directed/full sweep을 요청한다.
 ```
 
-v3 기준으로 `candidate_exits`의 핵심은 `bearing_deg_robot`이 현재 robot frame 기준이라는 점이다. 내부 graph edge는 node frame의 `relative_pose_node_to_dst`를 유지하지만, VLM prompt에는 live pose relation을 반영한 `relative_pose_robot_to_dst`를 함께 제공한다.
+v5 기준으로 `candidate_exits`의 핵심은 `bearing_deg_robot`이 현재 robot frame 기준이라는 점이다. 내부 graph edge는 node frame의 `relative_pose_node_to_dst`를 유지하지만, VLM prompt에는 live pose relation을 반영한 `relative_pose_robot_to_dst`를 함께 제공한다.
 
 ---
 
@@ -729,13 +735,13 @@ Step 8. ActionOutcome 기반 memory update
 
 ## 16. Habitat + PixelNav Integration Plan
 
-`qwen_nav_memory_framework_v3`는 아직 Habitat + PixelNav에 직접 연결된 최종 구현체는 아니다. 우리 실험에 붙이려면 `RobotBackend` protocol을 Habitat/PixelNav용으로 구현해야 한다.
+`qwen_nav_memory_framework_v5`는 Habitat + PixelNav 연결에서 사용하는 현재 구현 기준이다. 우리 실험에서는 `RobotBackend` protocol을 Habitat/PixelNav용으로 구현해 official Habitat env에 붙인다.
 
 ```python
 class HabitatPixelNavBackend:
     def get_robot_state(self):
         # Habitat agent pose / GPS-map aligned pose / heading
-        # v3 live pose relation 계산의 기준 입력
+        # v5 live pose relation 계산의 기준 입력
         ...
 
     def get_observation(self):
@@ -770,7 +776,7 @@ no_progress:
 
 odom_delta:
   action 단위 odometry delta
-  단, 새 edge 생성 시에는 v3 agent가 latest-node-to-robot cumulative live pose를 사용
+  단, 새 edge 생성 시에는 v5 agent가 latest-node-to-robot cumulative live pose를 사용
 
 success:
   local waypoint가 실행 가능한 방향이었는지
@@ -873,10 +879,10 @@ Latency:
 
 ```text
 Phase 1. Framework validation
-  qwen_nav_memory_framework_v3 smoke test 확인
+  qwen_nav_memory_framework_v5 smoke test 확인
   MemoryGraph / NavMemoryAgent 동작 확인
-  v3 unittest 10개 통과 확인
-  nav_memory_context_v4 출력 확인
+  v5 unittest 통과 확인
+  nav_memory_context_v5 출력 확인
   Qwen3-VL-32B-Thinking client 보강
 
 Phase 2. HabitatPixelNavBackend
@@ -892,7 +898,7 @@ Phase 3. ActionOutcome logging
   local waypoint reachability
 
 Phase 4. Memory context prompt insertion
-  build_vlm_memory_context(nav_memory_context_v4)를 nav_vlm_waypoint_v1 memory field에 삽입
+  build_vlm_memory_context(nav_memory_context_v5)를 nav_vlm_waypoint_v1 memory field에 삽입
   current_pose_relation_to_latest_node 확인
   place_recognition.revisit_candidates 확인
   candidate_exits / negative edge / compressed memory 확인
@@ -918,9 +924,8 @@ relative-pose topo-metric episodic graph로 유지합니다.
 Node는 장소/place/situation과 keyframe, semantic summary, navigation state를 저장하고,
 Edge는 node 간 directed connection과 relative SE(2) pose, traversal outcome, planning cost를 저장합니다.
 
-최종 구현 기준은 qwen_nav_memory_framework_v3입니다.
-v2에서 VLM-grounded place recognition과 backend-verified revisit/merge가 추가되었고,
-v3에서 latest/current node와 현재 robot pose 사이의 live relative pose relation이 보강되었습니다.
+최종 구현 기준은 qwen_nav_memory_framework_v5입니다.
+v5에서는 VLM-grounded place recognition, backend-verified revisit/merge, latest/current node와 현재 robot pose 사이의 live relative pose relation, soft merge, geometric filtering이 함께 사용됩니다.
 따라서 node에는 global pose를 저장하지 않으면서도,
 candidate exit는 current robot frame 기준으로 VLM에 제공할 수 있습니다.
 
@@ -929,7 +934,7 @@ candidate exit는 current robot frame 기준으로 VLM에 제공할 수 있습�
 문제가 된 entry branch만 피하면서 다른 exit나 unvisited frontier를 선택할 수 있습니다.
 
 VLM prompt에는 전체 graph가 아니라 build_vlm_memory_context가 만든 compact context만 넣습니다.
-이 context schema는 nav_memory_context_v4이며,
+이 context schema는 nav_memory_context_v5이며,
 current_pose_relation_to_latest_node, current localization, place recognition candidates,
 goal context, candidate exits, retrieved memory images, compressed negative memories가 포함됩니다.
 
@@ -939,7 +944,7 @@ mark_escape_edge, compress_node 같은 update를 제안할 수 있지만,
 따라서 VLM의 semantic reasoning을 memory 구축에 활용하면서도,
 hallucination으로 graph가 오염되는 것을 방지합니다.
 
-다음 구현 단계는 qwen_nav_memory_framework_v3에 HabitatPixelNavBackend를 붙이고,
-Qwen3-VL-32B-Thinking의 long reasoning/content-null 문제를 보완한 뒤,
-memory ablation을 수행하는 것입니다.
+현재 기본 구현은 qwen_nav_memory_framework_v5에 Habitat/PixelNav backend를 붙인 상태입니다.
+v6는 GaP-lite ablation으로 `candidate_refs`, `nav_skill_cards`, `validation_checkpoints`, `Feedback.md`를 추가해 memory를 policy처럼 안전하게 사용하는지 검증합니다.
+Qwen3-VL-32B-Thinking과 heuristic policy의 차이, candidate exit/negative edge 활용, v5/v6 memory ablation을 수행하는 것입니다.
 ```

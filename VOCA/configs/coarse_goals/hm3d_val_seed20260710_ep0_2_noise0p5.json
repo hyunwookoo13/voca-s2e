@@ -1,0 +1,69 @@
+{
+  "goal_noise_std_m": 0.5,
+  "records": [
+    {
+      "derivation": "closest_reachable_episode_goal_viewpoint_from_start",
+      "derivation_start_geodesic_m": 9.563025,
+      "distance_uncertainty_m": 1.0,
+      "episode_id": "10",
+      "episode_index": 0,
+      "goal_noise_std_m": 0.5,
+      "goal_viewpoint_index": 0,
+      "map_xy": [
+        7.882316,
+        -2.743365
+      ],
+      "object_goal": "chair",
+      "reporting_constraint": "derived CoarseGoalNav only; do not report as category-only ObjectNav",
+      "scene_id": "q5QZSEeHe5g",
+      "source": "upstream_global_planner",
+      "task_protocol": "hm3d_derived_coarse_goalnav_v1",
+      "type": "map_waypoint",
+      "uncertainty": "medium"
+    },
+    {
+      "derivation": "closest_reachable_episode_goal_viewpoint_from_start",
+      "derivation_start_geodesic_m": 3.1986,
+      "distance_uncertainty_m": 1.0,
+      "episode_id": "10",
+      "episode_index": 1,
+      "goal_noise_std_m": 0.5,
+      "goal_viewpoint_index": 11,
+      "map_xy": [
+        7.51026,
+        -4.087229
+      ],
+      "object_goal": "plant",
+      "reporting_constraint": "derived CoarseGoalNav only; do not report as category-only ObjectNav",
+      "scene_id": "VBzV5z6i1WS",
+      "source": "upstream_global_planner",
+      "task_protocol": "hm3d_derived_coarse_goalnav_v1",
+      "type": "map_waypoint",
+      "uncertainty": "medium"
+    },
+    {
+      "derivation": "closest_reachable_episode_goal_viewpoint_from_start",
+      "derivation_start_geodesic_m": 5.629825,
+      "distance_uncertainty_m": 1.0,
+      "episode_id": "3",
+      "episode_index": 2,
+      "goal_noise_std_m": 0.5,
+      "goal_viewpoint_index": 2,
+      "map_xy": [
+        3.459141,
+        5.328865
+      ],
+      "object_goal": "toilet",
+      "reporting_constraint": "derived CoarseGoalNav only; do not report as category-only ObjectNav",
+      "scene_id": "a8BtkwhxdRV",
+      "source": "upstream_global_planner",
+      "task_protocol": "hm3d_derived_coarse_goalnav_v1",
+      "type": "map_waypoint",
+      "uncertainty": "medium"
+    }
+  ],
+  "schema_version": "voca_coarse_goal_dataset_v1",
+  "seed": 20260710,
+  "stage": "val",
+  "task_protocol": "hm3d_derived_coarse_goalnav_v1"
+}

@@ -1,0 +1,19 @@
+[
+  {
+    "candidate_gate_pass_rate": 0.666667,
+    "case_count": 3,
+    "completion_tokens_mean": 185.667,
+    "endpoint": "server02_8b_instruct_awq",
+    "json_success_rate": 1.0,
+    "latency_mean_sec": 0.884431,
+    "latency_median_sec": 0.852565,
+    "latency_p95_sec": 0.961152,
+    "measured_calls": 9,
+    "model": "qwen3-vl-8b-instruct-awq-4bit",
+    "pipeline_accept_rate": 0.666667,
+    "prompt_tokens_mean": 5219.333,
+    "risky_point_rate": 0.0,
+    "schema_success_rate": 1.0,
+    "timeout_or_error_rate": 0.0
+  }
+]

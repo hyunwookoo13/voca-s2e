@@ -1,0 +1,19 @@
+[
+  {
+    "candidate_gate_pass_rate": 1.0,
+    "case_count": 3,
+    "completion_tokens_mean": 184.333,
+    "endpoint": "instruct_awq",
+    "json_success_rate": 1.0,
+    "latency_mean_sec": 2.328985,
+    "latency_median_sec": 2.091688,
+    "latency_p95_sec": 3.618706,
+    "measured_calls": 9,
+    "model": "qwen3-vl-32b-instruct-awq",
+    "pipeline_accept_rate": 0.666667,
+    "prompt_tokens_mean": 4867.333,
+    "risky_point_rate": 0.333333,
+    "schema_success_rate": 1.0,
+    "timeout_or_error_rate": 0.0
+  }
+]

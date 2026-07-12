@@ -1,0 +1,48 @@
+# OS and editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python caches, environments, and build products
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.env
+.venv/
+venv/
+env/
+
+# Machine-local datasets, checkpoints, and generated assets
+/data
+/datasets
+/scene_datasets
+/checkpoints
+*.ts
+/constants.py
+/monitor-panoramic.jpg
+
+# Generated benchmark and debug outputs
+/outputs
+/results
+/tmp
+/*_trajectory
+/hm3d_eval_trajectory
+/objnav_hm3d.csv
+*.mp4
+*.csv
+*.jsonl
+
+# Keep only the curated lightweight evidence bundle in Git.
+!reports/weekend_20260711_12/media/*.mp4
+!reports/reproducibility_20260712/**/*.csv
+!reports/reproducibility_20260712/**/*.jsonl

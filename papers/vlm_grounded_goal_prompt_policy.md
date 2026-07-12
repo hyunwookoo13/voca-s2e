@@ -69,7 +69,7 @@ VLM input은 `nav_vlm_waypoint_v1` envelope를 사용한다.
    views
 
 5. memory
-   nav_memory_context_v4
+   nav_memory_context_v5
 
 6. constraints
    allowed_actions
@@ -129,7 +129,7 @@ memory.current_localization.last_seen_frame_index:
   과거 node가 얼마나 최근에 관측되었는지 판단
 ```
 
-중요한 점은 모든 과거 frame을 VLM에 넣지 않는다는 것이다. 과거 정보는 `nav_memory_context_v4`로 압축하고, 필요한 경우에만 `retrieved_memory_images`로 제한된 keyframe 이미지를 첨부한다.
+중요한 점은 모든 과거 frame을 VLM에 넣지 않는다는 것이다. 과거 정보는 `nav_memory_context_v5`로 압축하고, 필요한 경우에만 `retrieved_memory_images`로 제한된 keyframe 이미지를 첨부한다.
 
 ---
 
@@ -141,7 +141,12 @@ VLM prompt에 들어가는 memory는 전체 graph가 아니라 `build_vlm_memory
 
 ```text
 schema_version:
-  nav_memory_context_v4
+  nav_memory_context_v5
+
+v6 ablation:
+  nav_memory_context_v6
+  candidate_refs / nav_skill_cards / policy_harness_state 추가
+  go action은 가능하면 selected_candidate_ref를 함께 출력
 
 current_pose_relation_to_latest_node:
   latest/current node 기준 현재 robot pose relation
@@ -383,7 +388,7 @@ backend는 confidence, retrieval score, topology consistency, critical memory co
 
 ## 10. System Prompt Policy
 
-구현 기준 system prompt는 `qwen_nav_memory_framework_v3/nav_memory_qwen/prompts.py`의 정책을 따른다.
+구현 기준 system prompt는 `qwen_nav_memory_framework_v5/nav_memory_qwen/prompts.py`의 정책을 따른다.
 
 핵심 내용은 다음과 같다.
 
@@ -474,7 +479,7 @@ Memory images:
 
 Text memory:
   full graph를 넣지 않음
-  nav_memory_context_v4 compact context만 삽입
+  nav_memory_context_v5 compact context만 삽입
 
 Reasoning:
   hidden chain-of-thought 금지
@@ -493,7 +498,7 @@ Reasoning:
 1. HabitatPixelNavBackend.get_robot_state()
 2. HabitatPixelNavBackend.get_observation()
 3. NavMemoryAgent updates MemoryGraph
-4. MemoryGraph.build_vlm_memory_context(nav_memory_context_v4)
+4. MemoryGraph.build_vlm_memory_context(nav_memory_context_v5)
 5. build_vlm_input_v1(task, robot_state, observation, memory, constraints)
 6. Qwen3-VL decides action JSON
 7. Safety parser validates JSON
@@ -513,11 +518,11 @@ Reasoning:
 ```text
 I1. Prompt policy 문서 확정
   nav_vlm_waypoint_v1
-  nav_memory_context_v4
+  nav_memory_context_v5
   controlled reason code
   observation request policy
 
-I2. qwen_nav_memory_framework_v3 prompt와 정합성 확인
+I2. qwen_nav_memory_framework_v5 prompt와 정합성 확인
   SYSTEM_PROMPT
   USER_PROMPT_TEMPLATE
   memory_ops policy
@@ -546,9 +551,11 @@ VLM은 low-level controller가 아니라 semantic supervisor이며,
 PixelNav/S2E가 실행할 수 있는 visible navigable point 또는 rotate/request_observation/stop을 출력합니다.
 
 Prompt input은 nav_vlm_waypoint_v1 envelope를 사용하고,
-task, coordinate frame, robot state, observation, nav_memory_context_v4, constraints 순서로 구성합니다.
+task, coordinate frame, robot state, observation, nav_memory_context_v5, constraints 순서로 구성합니다.
 Observation은 view_id, view_type, relative_heading_deg, timestamp를 갖고,
 memory는 current_pose_relation_to_latest_node, candidate_exits, place_recognition, deadlock_state를 포함합니다.
+v6 ablation에서는 여기에 candidate_refs, nav_skill_cards, policy_harness_state가 추가되며,
+go 출력은 selected_candidate_ref를 통해 backend가 제안한 exit 후보와 연결됩니다.
 
 VLM decision은 safety, memory avoidance, goal alignment, grounded navigability, information sufficiency 순서로 수행합니다.
 특히 candidate_exits는 current robot frame 기준 bearing_deg_robot으로 제공되므로,

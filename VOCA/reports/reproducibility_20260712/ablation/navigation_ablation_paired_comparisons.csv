@@ -1,0 +1,4 @@
+baseline,treatment,paired_episode_count,success_rate_delta,baseline_only_successes,treatment_only_successes,mcnemar_exact_p,spl_delta_mean,spl_delta_ci95_low,spl_delta_ci95_high,final_distance_delta_mean_m,episode_time_delta_mean_sec
+full,no_memory,3,0.0,0,0,1.0,0.0,0.0,0.0,-2.167880023519198,-174.29519991068324
+full,no_pixelnav_scoring,3,-0.3333333333333333,1,0,1.0,-0.2770770021124667,-0.8201479262529017,0.2659939220279682,-2.2201858883102736,41.38254072367757
+full,no_memory_no_pixelnav_scoring,3,0.3333333333333333,0,1,1.0,0.1648685843814592,-0.15827384100620093,0.4880110097691194,-3.742605231081446,-513.026155596308

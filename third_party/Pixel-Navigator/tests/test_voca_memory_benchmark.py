@@ -1,6 +1,8 @@
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -203,6 +205,38 @@ class DummyVideoWriter:
 
 
 class VocaMemoryBenchmarkTests(unittest.TestCase):
+    def test_ensure_voca_imports_accepts_v6_framework_selector(self):
+        from voca_memory_benchmark import ensure_voca_imports
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            framework = root / "qwen_nav_memory_framework_v6"
+            framework.mkdir()
+
+            before = list(sys.path)
+            try:
+                ensure_voca_imports(root, memory_framework="v6")
+                self.assertEqual(sys.path[0], str(framework))
+                self.assertIn(str(root), sys.path)
+            finally:
+                sys.path[:] = before
+
+    def test_ensure_voca_imports_honors_memory_framework_env(self):
+        from voca_memory_benchmark import ensure_voca_imports
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            framework = root / "qwen_nav_memory_framework_v6"
+            framework.mkdir()
+
+            before = list(sys.path)
+            try:
+                with patch.dict(os.environ, {"VOCA_MEMORY_FRAMEWORK": "v6"}):
+                    ensure_voca_imports(root)
+                self.assertEqual(sys.path[0], str(framework))
+            finally:
+                sys.path[:] = before
+
     def test_habitat_env_memory_backend_executes_pixelnav_rollout(self):
         from voca_memory_benchmark import HabitatEnvMemoryBackend
 
@@ -416,6 +450,7 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
 
             summary = json.loads(Path(result["summary_json"]).read_text(encoding="utf-8"))
             self.assertEqual(summary["benchmark_type"], "official_habitat_pointnav_with_voca_memory")
+            self.assertEqual(summary["episodes"][0]["memory_framework"], "v5")
             self.assertEqual(summary["episodes"][0]["goal_position_xyz"], [1.0, 0.0, 0.0])
             self.assertEqual(summary["aggregate"]["success"], 1.0)
             self.assertEqual(summary["aggregate"]["mean_distance_to_goal_delta"], 2.8)
@@ -433,6 +468,33 @@ class VocaMemoryBenchmarkTests(unittest.TestCase):
 
         self.assertAlmostEqual(goal_xy[0], 1.0, places=5)
         self.assertAlmostEqual(goal_xy[1], 4.0, places=5)
+
+    def test_pointnav_bearing_heuristic_attaches_safe_front_candidate_ref(self):
+        from voca_memory_benchmark import PointNavBearingHeuristicVLMClient
+
+        client = PointNavBearingHeuristicVLMClient(rotate_threshold_deg=90.0)
+        output = client.decide({
+            "task": {
+                "task_mode": "PointNav",
+                "coarse_goal": {"relative_bearing_deg": 0.0, "distance_m": 3.0},
+            },
+            "observation": {
+                "image_width": 64,
+                "image_height": 48,
+                "views": [{"view_id": 0, "view_type": "front"}],
+            },
+            "memory": {
+                "candidate_refs": {
+                    "exits": [
+                        {"candidate_ref": "exit_bad", "view_type_hint": "front", "avoid": True, "score": 9.0},
+                        {"candidate_ref": "exit_ok", "view_type_hint": "front", "avoid": False, "score": 1.0},
+                    ]
+                }
+            },
+        })
+
+        self.assertEqual(output["action"], "go")
+        self.assertEqual(output["selected_candidate_ref"], "exit_ok")
 
     def test_pointnav_benchmark_respects_low_level_env_step_budget(self):
         from voca_memory_benchmark import run_pointnav_memory_benchmark

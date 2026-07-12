@@ -89,7 +89,7 @@ mean_memory_edges = 0.0
 실행 명령:
 
 ```bash
-export QWEN_BASE_URL="http://server-01.cgv:8000/v1"
+export QWEN_BASE_URL="http://localhost:8000/v1"
 export QWEN_API_KEY="EMPTY"
 export QWEN_MODEL="qwen3-vl-32b-thinking"
 export QWEN_TIMEOUT_S="600"

@@ -705,6 +705,7 @@ class NavMemoryAgent:
                 "current_node_id": s.current_node_id,
                 "goal_distance_m": s.goal_distance_m,
                 "vlm_output": s.vlm_output,
+                "vlm_input": s.vlm_input,
                 "outcome": None if s.outcome is None else {
                     "action": s.outcome.action,
                     "success": s.outcome.success,

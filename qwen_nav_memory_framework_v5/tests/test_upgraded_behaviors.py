@@ -1,6 +1,7 @@
 import tempfile
 from pathlib import Path
 import unittest
+import json
 
 import numpy as np
 
@@ -80,6 +81,29 @@ class UpgradedBehaviorTest(unittest.TestCase):
         self.assertIn("place_recognition", ctx)
         self.assertGreaterEqual(len(ctx["place_recognition"]["revisit_candidates"]), 1)
         self.assertEqual(ctx["graph_summary"]["pose_graph_optimization"], "TODO_not_enabled")
+
+    def test_saved_step_log_includes_auditable_v5_memory_context(self):
+        with tempfile.TemporaryDirectory() as td:
+            img = StaticImageBackend.create_demo_image(Path(td) / "img.jpg")
+            robot = StaticImageBackend(img, step_m=0.5)
+            agent = NavMemoryAgent(
+                robot=robot,
+                vlm_client=FrontGoVLM(),
+                config=NavAgentConfig(max_steps=1, force_new_node_translation_m=10.0),
+            )
+
+            agent.step(goal_map_xy=(5.0, 0.0), step_index=0)
+            out_dir = Path(td) / "run"
+            agent.save_run(out_dir)
+
+            steps = json.loads((out_dir / "steps.json").read_text(encoding="utf-8"))["steps"]
+            memory = steps[0]["vlm_input"]["memory"]
+
+            self.assertEqual(memory["schema_version"], "nav_memory_context_v5")
+            self.assertIn("current_pose_relation_to_latest_node", memory)
+            self.assertIn("place_recognition", memory)
+            self.assertIn("candidate_exits", memory["local_topology"])
+            self.assertIn("loop_warning", memory)
 
     def test_rotate_to_front_policy_prevents_non_front_waypoint_execution(self):
         with tempfile.TemporaryDirectory() as td:

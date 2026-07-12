@@ -1,0 +1,55 @@
+{
+  "schema_version": "voca_navigation_stress_suite_v1",
+  "metadata": {
+    "model": "qwen3-vl-8b-thinking-awq-4bit",
+    "base_url": "${QWEN_BASE_URL}",
+    "duration_sec": 8.28512,
+    "offline_only": false,
+    "stop_episodes_requested": 3
+  },
+  "summaries": [
+    {
+      "suite": "deterministic_guards",
+      "samples": 6,
+      "passed_cases": 6,
+      "passed": true,
+      "required": true
+    },
+    {
+      "suite": "revisit_retrieval",
+      "threshold": 0.84,
+      "samples": 112,
+      "tp": 43,
+      "fp": 0,
+      "tn": 13,
+      "fn": 56,
+      "precision": 1.0,
+      "recall": 0.434343,
+      "false_positive_rate": 0.0,
+      "passed": true,
+      "criterion": "zero labeled false merges and precision >= 0.98",
+      "required": true
+    },
+    {
+      "suite": "stop_verifier",
+      "samples": 9,
+      "positive_samples": 3,
+      "negative_samples": 6,
+      "true_positive": 2,
+      "false_positive": 0,
+      "true_positive_rate": 0.666667,
+      "false_positive_rate": 0.0,
+      "passed": true,
+      "criterion": "zero false stops and >= 0.5 positive recall",
+      "required": true
+    },
+    {
+      "suite": "revisit_verifier",
+      "samples": 3,
+      "passed_cases": 3,
+      "passed": true,
+      "required": true
+    }
+  ],
+  "all_required_suites_passed": true
+}

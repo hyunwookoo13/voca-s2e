@@ -57,7 +57,8 @@ VLM decision:
 - 각 RGB view는 numeric `view_id`와 semantic `view_type`을 분리한다.
 - observation에는 시간 흐름을 위해 `timestamp_ms`, `frame_index`, view별 timestamp를 포함한다.
 - `memory`에는 전체 graph 원본을 넣지 않고, `MemoryGraph.build_vlm_memory_context()`가 만든 compact context만 넣는다.
-- 최종 memory 기준은 `qwen_nav_memory_framework_v3`이며, VLM input에 들어가는 memory context schema는 `nav_memory_context_v4`를 사용한다.
+- 현재 구현 기준은 `qwen_nav_memory_framework_v5`이며, VLM input에 들어가는 memory context schema는 `nav_memory_context_v5`를 사용한다.
+- ablation 옵션인 `qwen_nav_memory_framework_v6`는 `nav_memory_context_v6`로 확장하며, `candidate_refs`, `nav_skill_cards`, `policy_harness_state`, `validation_checkpoints`를 추가한다. 단, 공식 benchmark 기본값은 v5로 유지한다.
 
 ```json
 {
@@ -112,7 +113,7 @@ VLM decision:
     ]
   },
   "memory": {
-    "schema_version": "nav_memory_context_v4",
+    "schema_version": "nav_memory_context_v5",
     "graph_summary": {
       "num_nodes": 0,
       "num_edges": 0,
@@ -312,7 +313,7 @@ VLM이 현재 관측만으로 waypoint를 선택하기 어렵다고 판단하면
 
 ```
 "memory": {
-  "schema_version": "nav_memory_context_v4",
+  "schema_version": "nav_memory_context_v5",
   "graph_summary": {
     "num_nodes": 0,
     "num_edges": 0,
@@ -371,9 +372,11 @@ VLM이 현재 관측만으로 waypoint를 선택하기 어렵다고 판단하면
 ```
 
 초기 episode에서는 빈 graph에서 시작하지만, navigation이 진행되면 backend가 node-edge graph를 갱신한다.
-VLM prompt에는 전체 graph를 그대로 넣지 않고 `build_vlm_memory_context()` 결과만 넣는다. 이 context는 `nav_memory_context_v4`이며, `current_pose_relation_to_latest_node`, place recognition 후보, 현재 node, 후보 exit, 실패한 방향, loop warning, 관련 keyframe summary만 sparse하게 포함한다.
+VLM prompt에는 전체 graph를 그대로 넣지 않고 `build_vlm_memory_context()` 결과만 넣는다. 이 context는 `nav_memory_context_v5`이며, `current_pose_relation_to_latest_node`, place recognition 후보, 현재 node, 후보 exit, 실패한 방향, loop warning, 관련 keyframe summary만 sparse하게 포함한다.
 `current_pose_relation_to_latest_node`는 node에 global pose를 저장하지 않으면서도 candidate exit를 current robot frame 기준으로 해석하기 위한 runtime relative pose이다.
 `place_recognition`은 backend retrieval이 제안한 revisit 후보를 VLM이 confirm/reject/merge 요청할 수 있도록 제공하되, 실제 graph update는 backend verification 이후에만 수행한다.
+구현 audit을 위해 `NavMemoryAgent.save_run()`의 `steps.json`에는 각 step에서 VLM에 들어간 compact `vlm_input.memory`도 함께 저장한다. 이미지 데이터는 `strip_large_image_values()`로 축약한다.
+v6 ablation에서는 같은 `steps.json`에 `validation_feedback`과 `validation_checkpoints`가 추가되고, `Feedback.md`에 GaP-lite rule pass/fail summary가 저장된다.
 세부 memory 구조와 update rule은 별도 문서인 `memory_vlm_prompt.md`에서 정의한다.
 
 > `constraints:` **VLM output을 안정적으로 제한하기 위한 필드다.**

@@ -1,0 +1,2 @@
+endpoint,model,measured_calls,case_count,latency_mean_sec,latency_median_sec,latency_p95_sec,json_success_rate,schema_success_rate,candidate_gate_pass_rate,pipeline_accept_rate,risky_point_rate,completion_tokens_mean,prompt_tokens_mean,timeout_or_error_rate
+instruct_awq,qwen3-vl-32b-instruct-awq,9,3,2.328985,2.091688,3.618706,1.0,1.0,1.0,0.666667,0.333333,184.333,4867.333,0.0

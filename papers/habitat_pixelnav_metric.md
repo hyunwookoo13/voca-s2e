@@ -35,8 +35,8 @@ Qwen3-VL-32B-Thinking random5:
   4/5 trial에서 valid selected_view/point 생성
   1개 trial은 long reasoning / JSON completion issue로 실패
 
-Memory framework v3:
-  qwen_nav_memory_framework_v3 unittest 10개 통과
+Memory framework v5:
+  qwen_nav_memory_framework_v5 unittest 통과
   place recognition / merge / negative edge / live latest-node pose relation 확인
 ```
 
@@ -62,7 +62,7 @@ Level 2. ActionOutcome logging
 
 Level 3. Memory closed loop
   ActionOutcome 기반으로 node/edge/negative memory를 갱신하고,
-  다음 VLM prompt에 nav_memory_context_v4를 삽입할 수 있는지 확인
+  다음 VLM prompt에 nav_memory_context_v5를 삽입할 수 있는지 확인
 ```
 
 이번 주의 최소 목표는 Level 2까지 안정적으로 만들고, Level 3의 memory context 삽입을 최소 시나리오에서 확인하는 것이다.
@@ -81,7 +81,7 @@ Habitat Simulator
 
 NavMemoryAgent
   -> MemoryGraph update
-  -> build_vlm_memory_context(nav_memory_context_v4)
+  -> build_vlm_memory_context(nav_memory_context_v5)
   -> nav_vlm_waypoint_v1 input 생성
 
 Qwen3-VL Supervisor
@@ -317,7 +317,7 @@ Path Efficiency:
 
 ```text
 Memory Context Validity:
-  nav_memory_context_v4 생성 성공률
+  nav_memory_context_v5 생성 성공률
 
 Candidate Exit Coverage:
   local_topology.candidate_exits가 현재 선택 가능한 방향을 포함하는 비율
@@ -339,6 +339,11 @@ False Merge Rate:
 
 Candidate Exit Bearing Error:
   node frame 기준 bearing과 current robot frame 보정 bearing의 차이 및 보정 후 정확도
+
+v6 GaP-lite Validation:
+  selected_candidate_ref가 memory.candidate_refs.exits에 존재하는 비율
+  NAV_GO_001/NAV_GO_002/NAV_GO_003 failure rate
+  request_observation recovery 이후 progress 회복률
 ```
 
 ### 6.5 End-to-End Episode Metrics
@@ -383,7 +388,7 @@ End-to-end metric은 integration이 안정화된 뒤 사용한다. 이번 단계
     "distance_m": 9.01
   },
   "memory_summary": {
-    "schema_version": "nav_memory_context_v4",
+    "schema_version": "nav_memory_context_v5",
     "num_nodes": 3,
     "num_edges": 2,
     "num_deadlock_edges": 1
@@ -438,8 +443,13 @@ ActionOutcome logging:
   success, moved_distance_m, collision, no_progress, odom_delta가 모든 step에서 기록
 
 Memory context insertion:
-  nav_memory_context_v4가 매 step VLM input에 포함
+  nav_memory_context_v5가 매 step VLM input에 포함
   current_pose_relation_to_latest_node가 valid 또는 명시적으로 invalid로 기록
+
+v6 GaP-lite ablation:
+  nav_memory_context_v6 사용 시 candidate_refs / nav_skill_cards가 VLM input에 포함
+  steps.json에 validation_checkpoints / validation_feedback 기록
+  Feedback.md에 rule pass/fail summary 기록
 
 Negative memory sanity:
   collision/no_progress 발생 시 negative edge 또는 deadlock suspected가 기록
@@ -497,7 +507,7 @@ P2. execute_waypoint 연결
   ActionOutcome 생성
 
 P3. NavMemoryAgent 연결
-  build_vlm_memory_context(nav_memory_context_v4)
+  build_vlm_memory_context(nav_memory_context_v5)
   memory_ops 검증
   negative edge / deadlock update
 
@@ -538,6 +548,10 @@ Risk 4. False merge가 memory graph를 오염
       corridor/doorway/unknown 등 place category별 conservative threshold 적용
       far visual alias / outlier는 same-place merge 대신 reject 또는 request_observation
     false-positive merge 방지를 duplicate node 제거보다 우선
+    qwen_nav_memory_framework_v6 ablation에서는 GaP-lite validation 사용
+      go action은 selected_candidate_ref를 요구
+      unknown/avoid=true candidate_ref는 request_observation으로 recover
+      Feedback.md로 validation failure를 prompt/policy 개선 신호로 사용
 
 Risk 5. CPU Habitat rendering이 느림
   Mitigation:

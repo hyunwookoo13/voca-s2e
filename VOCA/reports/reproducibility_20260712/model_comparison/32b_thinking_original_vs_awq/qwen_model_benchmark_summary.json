@@ -1,0 +1,36 @@
+[
+  {
+    "candidate_gate_pass_rate": 1.0,
+    "case_count": 3,
+    "completion_tokens_mean": 937.0,
+    "endpoint": "awq",
+    "json_success_rate": 1.0,
+    "latency_mean_sec": 9.81752,
+    "latency_median_sec": 8.438256,
+    "latency_p95_sec": 12.823836,
+    "measured_calls": 9,
+    "model": "qwen3-vl-32b-thinking-awq",
+    "pipeline_accept_rate": 1.0,
+    "prompt_tokens_mean": 4339.333,
+    "risky_point_rate": 0.0,
+    "schema_success_rate": 1.0,
+    "timeout_or_error_rate": 0.0
+  },
+  {
+    "candidate_gate_pass_rate": 1.0,
+    "case_count": 3,
+    "completion_tokens_mean": 1229.667,
+    "endpoint": "original",
+    "json_success_rate": 1.0,
+    "latency_mean_sec": 39.255522,
+    "latency_median_sec": 39.070237,
+    "latency_p95_sec": 40.117295,
+    "measured_calls": 9,
+    "model": "qwen3-vl-32b-thinking",
+    "pipeline_accept_rate": 1.0,
+    "prompt_tokens_mean": 4329.333,
+    "risky_point_rate": 0.0,
+    "schema_success_rate": 1.0,
+    "timeout_or_error_rate": 0.0
+  }
+]
