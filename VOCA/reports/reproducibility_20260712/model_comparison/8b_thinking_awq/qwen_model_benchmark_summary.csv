@@ -1,0 +1,2 @@
+endpoint,model,measured_calls,case_count,latency_mean_sec,latency_median_sec,latency_p95_sec,json_success_rate,schema_success_rate,candidate_gate_pass_rate,pipeline_accept_rate,risky_point_rate,completion_tokens_mean,prompt_tokens_mean,timeout_or_error_rate
+server02_8b_thinking_awq,qwen3-vl-8b-thinking-awq-4bit,9,3,5.19619,5.300403,6.08543,1.0,1.0,1.0,0.666667,0.333333,1168.222,5232.333,0.0

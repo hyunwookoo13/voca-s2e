@@ -24,3 +24,10 @@ third_party/Pixel-Navigator/reports/**/episode_*/
 
 # Local reference material supplied for analysis
 md/
+
+# Integrated VOCA runtime assets and generated benchmark outputs
+/VOCA/data
+/VOCA/checkpoints
+/VOCA/outputs
+/VOCA/mobileclip_blt.ts
+/VOCA/monitor-panoramic.jpg

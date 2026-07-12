@@ -1,0 +1,1265 @@
+{
+  "schema_version": "relative_topometric_memory_graph_v6",
+  "graph_id": "episode_483fa114",
+  "pose_policy": {
+    "node_global_pose_stored": false,
+    "edge_pose_type": "relative_SE2",
+    "edge_pose_direction": "src_to_dst",
+    "supports_path_composition": true,
+    "pose_graph_optimization": "TODO_not_enabled"
+  },
+  "nodes": {
+    "n_00001": {
+      "node_id": "n_00001",
+      "node_type": "place",
+      "place_category": "living_room",
+      "created_frame_index": 0,
+      "created_timestamp_ms": 1783836421752,
+      "last_seen_frame_index": 0,
+      "last_seen_timestamp_ms": 1783836421752,
+      "visit_count": 1,
+      "keyframes": [
+        {
+          "keyframe_id": "kf_00001",
+          "node_id": "n_00001",
+          "frame_index": 0,
+          "timestamp_ms": 1783836421752,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0000_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00001",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA observed place at frame 0",
+          "archived_image_ref": null
+        }
+      ],
+      "semantic": {
+        "short_description": "living_room: search_current_room (partial)",
+        "strategic_state": {
+          "current_room": "living_room",
+          "target_evidence": "context_only",
+          "navigation_intent": "search_current_room",
+          "room_search_status": "partial",
+          "selected_exit_ref": null,
+          "reason_code": "SAFE_INTERIOR_PROGRESS",
+          "frame_index": 0,
+          "source": "qwen_vlm_unverified_semantic_hypothesis"
+        },
+        "room_search_status": "partial",
+        "target_hypothesis": {
+          "target_object": "houseplant",
+          "evidence": "context_only",
+          "verified": false,
+          "frame_index": 0,
+          "policy": "VLM target evidence is a hypothesis; only the dedicated stop verifier may authorize completion"
+        }
+      },
+      "navigation_state": {
+        "deadlock_status": "none",
+        "loop_status": "none",
+        "risk_level": "low",
+        "memory_importance": "medium"
+      },
+      "negative_memory": null,
+      "lifecycle": {
+        "storage_tier": "hot",
+        "vlm_visible": true,
+        "can_retrieve_image_for_vlm": true,
+        "compression_level": "none"
+      },
+      "visual_signature": {
+        "embedding_ids": [
+          "emb_kf_00001"
+        ],
+        "place_descriptor_id": "emb_kf_00001"
+      }
+    },
+    "n_00002": {
+      "node_id": "n_00002",
+      "node_type": "place",
+      "place_category": "unknown",
+      "created_frame_index": 18,
+      "created_timestamp_ms": 1783836437984,
+      "last_seen_frame_index": 18,
+      "last_seen_timestamp_ms": 1783836437984,
+      "visit_count": 1,
+      "keyframes": [
+        {
+          "keyframe_id": "kf_00002",
+          "node_id": "n_00002",
+          "frame_index": 18,
+          "timestamp_ms": 1783836438070,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0001_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00002",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA multi-view place descriptor at frame 18 view 0",
+          "archived_image_ref": null
+        },
+        {
+          "keyframe_id": "kf_00003",
+          "node_id": "n_00002",
+          "frame_index": 25,
+          "timestamp_ms": 1783836448850,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0002_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00003",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA multi-view place descriptor at frame 25 view 0",
+          "archived_image_ref": null
+        }
+      ],
+      "semantic": {
+        "short_description": "unknown: approach_target (target_likely)",
+        "object_belief": {
+          "target_object": "houseplant",
+          "seen_target": true,
+          "candidate_objects": [
+            {
+              "target_object": "houseplant",
+              "frame_index": 18,
+              "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0001_marked_view_00.jpg",
+              "target_view_index": 0,
+              "target_center_x": 0.7,
+              "target_bbox_norm": [
+                0.65,
+                0.15,
+                0.8,
+                0.5
+              ],
+              "confidence": "high",
+              "identity_confidence": "high",
+              "position_xyz": [
+                5.219123840332031,
+                0.046541884541511536,
+                -4.317811965942383
+              ],
+              "heading_rad": -0.12067734294215923,
+              "target_view_relative_heading_deg": 0.0,
+              "target_bearing_robot_deg": 18.0,
+              "target_bearing_world_rad": 0.193482,
+              "verification_source": "dedicated_stop_identity_critic",
+              "identity_reason": "Coherent visible stems and leaves of a real indoor plant are present, distinct from curtains/artwork; the plant structure is unambiguous."
+            },
+            {
+              "target_object": "houseplant",
+              "frame_index": 25,
+              "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0002_marked_view_00.jpg",
+              "target_view_index": 0,
+              "target_center_x": 0.7,
+              "target_bbox_norm": [
+                0.65,
+                0.15,
+                0.8,
+                0.6
+              ],
+              "confidence": "medium",
+              "identity_confidence": "high",
+              "position_xyz": [
+                5.715487480163574,
+                0.046541884541511536,
+                -4.37800407409668
+              ],
+              "heading_rad": -0.12067734294215923,
+              "target_view_relative_heading_deg": 0.0,
+              "target_bearing_robot_deg": 18.0,
+              "target_bearing_world_rad": 0.193482,
+              "verification_source": "dedicated_stop_identity_critic",
+              "identity_reason": "The object shows coherent green leaves and stem structure of an indoor plant, distinct from curtains or artwork; no lookalike present."
+            }
+          ],
+          "last_update_reason": "dedicated_stop_identity_critic_verified_target"
+        },
+        "target_hypothesis": {
+          "target_object": "houseplant",
+          "evidence": "confirmed",
+          "verified": true,
+          "frame_index": 25,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0002_marked_view_00.jpg",
+          "target_bbox_norm": [
+            0.65,
+            0.15,
+            0.8,
+            0.6
+          ],
+          "verification_source": "dedicated_stop_identity_critic",
+          "policy": "backend-authoritative target memory; later unverified VLM semantics cannot clear it",
+          "latest_unverified_evidence": "possible",
+          "latest_unverified_frame_index": 25
+        },
+        "strategic_state": {
+          "current_room": "unknown",
+          "target_evidence": "possible",
+          "navigation_intent": "approach_target",
+          "room_search_status": "target_likely",
+          "selected_exit_ref": null,
+          "reason_code": "STRATEGY_MISSING_DEFAULT",
+          "frame_index": 25,
+          "source": "qwen_vlm_unverified_semantic_hypothesis"
+        },
+        "room_search_status": "target_likely"
+      },
+      "navigation_state": {
+        "deadlock_status": "none",
+        "loop_status": "none",
+        "risk_level": "low",
+        "memory_importance": "high"
+      },
+      "negative_memory": null,
+      "lifecycle": {
+        "storage_tier": "hot",
+        "vlm_visible": true,
+        "can_retrieve_image_for_vlm": true,
+        "compression_level": "none"
+      },
+      "visual_signature": {
+        "embedding_ids": [
+          "emb_kf_00002",
+          "emb_kf_00003"
+        ],
+        "place_descriptor_id": "emb_kf_00003"
+      }
+    },
+    "n_00003": {
+      "node_id": "n_00003",
+      "node_type": "place",
+      "place_category": "unknown",
+      "created_frame_index": 32,
+      "created_timestamp_ms": 1783836464799,
+      "last_seen_frame_index": 32,
+      "last_seen_timestamp_ms": 1783836464799,
+      "visit_count": 1,
+      "keyframes": [
+        {
+          "keyframe_id": "kf_00004",
+          "node_id": "n_00003",
+          "frame_index": 32,
+          "timestamp_ms": 1783836464892,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0003_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00004",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA multi-view place descriptor at frame 32 view 0",
+          "archived_image_ref": null
+        },
+        {
+          "keyframe_id": "kf_00005",
+          "node_id": "n_00003",
+          "frame_index": 40,
+          "timestamp_ms": 1783836478434,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0004_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00005",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA multi-view place descriptor at frame 40 view 0",
+          "archived_image_ref": null
+        },
+        {
+          "keyframe_id": "kf_00006",
+          "node_id": "n_00003",
+          "frame_index": 46,
+          "timestamp_ms": 1783836488135,
+          "view_type": "front",
+          "relative_heading_deg": 0.0,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0005_raw_view_00.jpg",
+          "thumbnail_ref": null,
+          "embedding_id": "emb_kf_00006",
+          "active_for_vlm": true,
+          "storage_tier": "hot",
+          "quality_score": 1.0,
+          "caption": "VOCA multi-view place descriptor at frame 46 view 0",
+          "archived_image_ref": null
+        }
+      ],
+      "semantic": {
+        "short_description": "unknown: verify_target (target_found)",
+        "object_belief": {
+          "target_object": "houseplant",
+          "seen_target": true,
+          "candidate_objects": [
+            {
+              "target_object": "houseplant",
+              "frame_index": 32,
+              "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0003_marked_view_00.jpg",
+              "target_view_index": 0,
+              "target_center_x": 0.75,
+              "target_bbox_norm": [
+                0.6,
+                0.0,
+                0.9,
+                0.7
+              ],
+              "confidence": "high",
+              "identity_confidence": "high",
+              "position_xyz": [
+                6.211851119995117,
+                0.046541884541511536,
+                -4.438196182250977
+              ],
+              "heading_rad": -0.12067734294215923,
+              "target_view_relative_heading_deg": 0.0,
+              "target_bearing_robot_deg": 22.5,
+              "target_bearing_world_rad": 0.272022,
+              "verification_source": "dedicated_stop_identity_critic",
+              "identity_reason": "The object contains coherent visible stems and leaves of a decorative indoor plant, with a pot visible at the base, meeting the exact-category criteria for a houseplant."
+            },
+            {
+              "target_object": "houseplant",
+              "frame_index": 40,
+              "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0004_marked_view_00.jpg",
+              "target_view_index": 0,
+              "target_center_x": 0.6,
+              "target_bbox_norm": [
+                0.5,
+                0.0,
+                0.75,
+                0.75
+              ],
+              "confidence": "high",
+              "identity_confidence": "high",
+              "position_xyz": [
+                6.70821475982666,
+                0.11238974332809448,
+                -4.498388290405273
+              ],
+              "heading_rad": 0.4029214271697063,
+              "target_view_relative_heading_deg": 0.0,
+              "target_bearing_robot_deg": 9.0,
+              "target_bearing_world_rad": 0.560001,
+              "verification_source": "dedicated_stop_identity_critic",
+              "identity_reason": "Coherent visible stems and leaves of a decorative indoor plant; no surrounding elements (curtains, wallpaper) are part of the plant; structure is unambiguous as a potted plant."
+            },
+            {
+              "target_object": "houseplant",
+              "frame_index": 46,
+              "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0005_marked_view_00.jpg",
+              "target_view_index": 0,
+              "target_center_x": 0.55,
+              "target_bbox_norm": [
+                0.4,
+                0.0,
+                0.8,
+                0.8
+              ],
+              "confidence": "high",
+              "identity_confidence": "high",
+              "position_xyz": [
+                6.938194751739502,
+                0.14993298053741455,
+                -4.40036153793335
+              ],
+              "heading_rad": 0.4029214271697063,
+              "target_view_relative_heading_deg": 0.0,
+              "target_bearing_robot_deg": 4.5,
+              "target_bearing_world_rad": 0.481461,
+              "verification_source": "dedicated_stop_identity_critic",
+              "identity_reason": "The object shows coherent visible stems and leaves of a decorative indoor plant with a pot base, meeting the criteria for a houseplant. No surrounding elements like wallpaper or curtains are misclassified as the plant."
+            }
+          ],
+          "last_update_reason": "dedicated_stop_identity_critic_verified_target"
+        },
+        "target_hypothesis": {
+          "target_object": "houseplant",
+          "evidence": "confirmed",
+          "verified": true,
+          "frame_index": 46,
+          "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0005_marked_view_00.jpg",
+          "target_bbox_norm": [
+            0.4,
+            0.0,
+            0.8,
+            0.8
+          ],
+          "verification_source": "dedicated_stop_identity_critic",
+          "policy": "backend-authoritative target memory; later unverified VLM semantics cannot clear it",
+          "latest_unverified_evidence": "confirmed",
+          "latest_unverified_frame_index": 46
+        },
+        "strategic_state": {
+          "current_room": "unknown",
+          "target_evidence": "confirmed",
+          "navigation_intent": "verify_target",
+          "room_search_status": "target_found",
+          "selected_exit_ref": null,
+          "reason_code": "STRATEGY_MISSING_DEFAULT",
+          "frame_index": 46,
+          "source": "qwen_vlm_unverified_semantic_hypothesis"
+        },
+        "room_search_status": "target_found"
+      },
+      "navigation_state": {
+        "deadlock_status": "none",
+        "loop_status": "none",
+        "risk_level": "low",
+        "memory_importance": "high"
+      },
+      "negative_memory": null,
+      "lifecycle": {
+        "storage_tier": "hot",
+        "vlm_visible": true,
+        "can_retrieve_image_for_vlm": true,
+        "compression_level": "none"
+      },
+      "visual_signature": {
+        "embedding_ids": [
+          "emb_kf_00004",
+          "emb_kf_00005",
+          "emb_kf_00006"
+        ],
+        "place_descriptor_id": "emb_kf_00006"
+      }
+    }
+  },
+  "edges": {
+    "e_00001": {
+      "edge_id": "e_00001",
+      "src_node_id": "n_00001",
+      "dst_node_id": "n_00002",
+      "edge_type": "temporal_transition",
+      "relation_type": "transition",
+      "directed": true,
+      "traversal": {
+        "status": "success",
+        "success_count": 1,
+        "failure_count": 0,
+        "last_outcome": "success",
+        "last_attempt_frame": 18,
+        "escape_edge_id": null
+      },
+      "planning_cost": {
+        "base_cost": 1.0692,
+        "deadlock_penalty": -0.15,
+        "loop_penalty": 0.0,
+        "uncertainty_penalty": 0.41,
+        "final_cost": 1.3292
+      },
+      "evidence": {
+        "path_direction_schema": "executed_path_tangent_v1",
+        "departure_bearing_src_deg": -60.0,
+        "departure_bearing_source": "executed_position_trace",
+        "arrival_backtrack_bearing_dst_deg": 120.0,
+        "executed_path_length_m": 1.156586,
+        "path_polyline_src_xy": [
+          [
+            -0.0,
+            -0.0
+          ],
+          [
+            0.0533,
+            -0.0923
+          ],
+          [
+            0.0533,
+            -0.3423
+          ],
+          [
+            0.1783,
+            -0.5588
+          ],
+          [
+            0.1783,
+            -0.8088
+          ],
+          [
+            0.3033,
+            -1.0253
+          ]
+        ],
+        "path_guidance_lookahead_m": 0.6
+      },
+      "relative_pose_src_to_dst": {
+        "dx_m": 0.3033,
+        "dy_m": -1.0253,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    "e_00002": {
+      "edge_id": "e_00002",
+      "src_node_id": "n_00002",
+      "dst_node_id": "n_00001",
+      "edge_type": "temporal_transition_reverse",
+      "relation_type": "backtrack",
+      "directed": true,
+      "traversal": {
+        "status": "success",
+        "success_count": 1,
+        "failure_count": 0,
+        "last_outcome": "success",
+        "last_attempt_frame": 18,
+        "escape_edge_id": null
+      },
+      "planning_cost": {
+        "base_cost": 1.0692,
+        "deadlock_penalty": -0.15,
+        "loop_penalty": 0.0,
+        "uncertainty_penalty": 0.41,
+        "final_cost": 1.3292
+      },
+      "evidence": {
+        "path_direction_schema": "executed_path_tangent_v1",
+        "departure_bearing_src_deg": 120.0,
+        "departure_bearing_source": "executed_position_trace",
+        "reverse_of_edge_id": "e_00001",
+        "executed_path_length_m": 1.156586,
+        "path_polyline_src_xy": [
+          [
+            0.0,
+            -0.0
+          ],
+          [
+            -0.125,
+            0.2165
+          ],
+          [
+            -0.125,
+            0.4665
+          ],
+          [
+            -0.25,
+            0.683
+          ],
+          [
+            -0.25,
+            0.933
+          ],
+          [
+            -0.3033,
+            1.0253
+          ]
+        ],
+        "path_guidance_lookahead_m": 0.6
+      },
+      "relative_pose_src_to_dst": {
+        "dx_m": -0.3033,
+        "dy_m": 1.0253,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    "e_00003": {
+      "edge_id": "e_00003",
+      "src_node_id": "n_00002",
+      "dst_node_id": "n_00003",
+      "edge_type": "temporal_transition",
+      "relation_type": "transition",
+      "directed": true,
+      "traversal": {
+        "status": "success",
+        "success_count": 1,
+        "failure_count": 0,
+        "last_outcome": "success",
+        "last_attempt_frame": 32,
+        "escape_edge_id": null
+      },
+      "planning_cost": {
+        "base_cost": 1.0,
+        "deadlock_penalty": -0.15,
+        "loop_penalty": 0.0,
+        "uncertainty_penalty": 0.41,
+        "final_cost": 1.26
+      },
+      "evidence": {
+        "path_direction_schema": "executed_path_tangent_v1",
+        "departure_bearing_src_deg": 0.0,
+        "departure_bearing_source": "executed_position_trace",
+        "arrival_backtrack_bearing_dst_deg": -180.0,
+        "executed_path_length_m": 0.5,
+        "path_polyline_src_xy": [
+          [
+            0.5,
+            0.0
+          ],
+          [
+            0.75,
+            0.0
+          ],
+          [
+            1.0,
+            0.0
+          ]
+        ],
+        "path_guidance_lookahead_m": 0.6
+      },
+      "relative_pose_src_to_dst": {
+        "dx_m": 1.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    "e_00004": {
+      "edge_id": "e_00004",
+      "src_node_id": "n_00003",
+      "dst_node_id": "n_00002",
+      "edge_type": "temporal_transition_reverse",
+      "relation_type": "backtrack",
+      "directed": true,
+      "traversal": {
+        "status": "success",
+        "success_count": 1,
+        "failure_count": 0,
+        "last_outcome": "success",
+        "last_attempt_frame": 32,
+        "escape_edge_id": null
+      },
+      "planning_cost": {
+        "base_cost": 1.0,
+        "deadlock_penalty": -0.15,
+        "loop_penalty": 0.0,
+        "uncertainty_penalty": 0.41,
+        "final_cost": 1.26
+      },
+      "evidence": {
+        "path_direction_schema": "executed_path_tangent_v1",
+        "departure_bearing_src_deg": -180.0,
+        "departure_bearing_source": "executed_position_trace",
+        "reverse_of_edge_id": "e_00003",
+        "executed_path_length_m": 0.5,
+        "path_polyline_src_xy": [
+          [
+            -0.0,
+            0.0
+          ],
+          [
+            -0.25,
+            -0.0
+          ],
+          [
+            -0.5,
+            -0.0
+          ]
+        ],
+        "path_guidance_lookahead_m": 0.6
+      },
+      "relative_pose_src_to_dst": {
+        "dx_m": -1.0,
+        "dy_m": -0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    }
+  },
+  "current_node_id": "n_00003",
+  "previous_node_id": "n_00002",
+  "runtime_current_pose_relation_to_latest_node": {
+    "valid": true,
+    "latest_node_id": "n_00003",
+    "pose_type": "live_relative_SE2_not_global_node_pose",
+    "latest_node_to_robot": {
+      "dx_m": 0.7165,
+      "dy_m": 0.125,
+      "dyaw_deg": 30.0,
+      "covariance_diag": [
+        0.05,
+        0.05,
+        4.0
+      ]
+    },
+    "robot_to_latest_node": {
+      "dx_m": -0.683,
+      "dy_m": 0.25,
+      "dyaw_deg": -30.0,
+      "covariance_diag": [
+        0.05,
+        0.05,
+        4.0
+      ]
+    },
+    "distance_from_latest_node_m": 0.7273,
+    "heading_offset_from_latest_node_deg": 30.0,
+    "updated_frame_index": 46,
+    "source": "voca_runtime_pose",
+    "usage": "transform node-frame graph exits into current robot frame before VLM fine-goal selection"
+  },
+  "same_place_clusters": {},
+  "negative_edge_index": {},
+  "event_log": [
+    {
+      "timestamp_ms": 1783836421752,
+      "event_type": "add_keyframe",
+      "node_id": "n_00001",
+      "keyframe_id": "kf_00001",
+      "frame_index": 0
+    },
+    {
+      "timestamp_ms": 1783836421752,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00001",
+      "frame_index": 0,
+      "source": "node_created_identity_anchor",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836421752,
+      "event_type": "add_node",
+      "node_id": "n_00001",
+      "frame_index": 0,
+      "image_ref": true
+    },
+    {
+      "timestamp_ms": 1783836421752,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00001",
+      "frame_index": 0,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836435698,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00001",
+      "frame_index": 0,
+      "previous_room": "unknown",
+      "current_room": "living_room",
+      "target_evidence": "context_only",
+      "navigation_intent": "search_current_room",
+      "room_search_status": "partial",
+      "room_transition": false
+    },
+    {
+      "timestamp_ms": 1783836437984,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00001",
+      "frame_index": 18,
+      "source": "voca_post_go_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.3033,
+        "dy_m": -1.0253,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836437984,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00002",
+      "frame_index": 18,
+      "source": "node_created_identity_anchor",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836437984,
+      "event_type": "add_node",
+      "node_id": "n_00002",
+      "frame_index": 18,
+      "image_ref": false
+    },
+    {
+      "timestamp_ms": 1783836437984,
+      "event_type": "add_or_update_edge",
+      "edge_id": "e_00001",
+      "src": "n_00001",
+      "dst": "n_00002",
+      "status": "success",
+      "frame_index": 18
+    },
+    {
+      "timestamp_ms": 1783836437984,
+      "event_type": "add_or_update_edge",
+      "edge_id": "e_00002",
+      "src": "n_00002",
+      "dst": "n_00001",
+      "status": "success",
+      "frame_index": 18
+    },
+    {
+      "timestamp_ms": 1783836438070,
+      "event_type": "add_keyframe",
+      "node_id": "n_00002",
+      "keyframe_id": "kf_00002",
+      "frame_index": 18
+    },
+    {
+      "timestamp_ms": 1783836438071,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00002",
+      "frame_index": 18,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836448011,
+      "event_type": "update_object_belief",
+      "node_id": "n_00002",
+      "target_object": "houseplant",
+      "seen_target": true
+    },
+    {
+      "timestamp_ms": 1783836448011,
+      "event_type": "voca_verified_target_evidence",
+      "updated": true,
+      "node_id": "n_00002",
+      "target_object": "houseplant",
+      "frame_index": 18,
+      "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0001_marked_view_00.jpg",
+      "position_xyz": [
+        5.219123840332031,
+        0.046541884541511536,
+        -4.317811965942383
+      ],
+      "heading_rad": -0.12067734294215923,
+      "target_view_relative_heading_deg": 0.0,
+      "target_bearing_robot_deg": 18.0,
+      "target_bearing_world_rad": 0.193482,
+      "candidate_count": 1,
+      "verification_source": "dedicated_stop_identity_critic"
+    },
+    {
+      "timestamp_ms": 1783836448011,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00002",
+      "frame_index": 18,
+      "previous_room": "unknown",
+      "current_room": "unknown",
+      "target_evidence": "possible",
+      "navigation_intent": "approach_target",
+      "room_search_status": "target_likely",
+      "room_transition": false
+    },
+    {
+      "timestamp_ms": 1783836448758,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00002",
+      "frame_index": 25,
+      "source": "voca_post_go_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.5,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836448850,
+      "event_type": "add_keyframe",
+      "node_id": "n_00002",
+      "keyframe_id": "kf_00003",
+      "frame_index": 25
+    },
+    {
+      "timestamp_ms": 1783836448851,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00002",
+      "frame_index": 25,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.5,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836463948,
+      "event_type": "update_object_belief",
+      "node_id": "n_00002",
+      "target_object": "houseplant",
+      "seen_target": true
+    },
+    {
+      "timestamp_ms": 1783836463948,
+      "event_type": "voca_verified_target_evidence",
+      "updated": true,
+      "node_id": "n_00002",
+      "target_object": "houseplant",
+      "frame_index": 25,
+      "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0002_marked_view_00.jpg",
+      "position_xyz": [
+        5.715487480163574,
+        0.046541884541511536,
+        -4.37800407409668
+      ],
+      "heading_rad": -0.12067734294215923,
+      "target_view_relative_heading_deg": 0.0,
+      "target_bearing_robot_deg": 18.0,
+      "target_bearing_world_rad": 0.193482,
+      "candidate_count": 2,
+      "verification_source": "dedicated_stop_identity_critic"
+    },
+    {
+      "timestamp_ms": 1783836463949,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00002",
+      "frame_index": 25,
+      "previous_room": "unknown",
+      "current_room": "unknown",
+      "target_evidence": "possible",
+      "navigation_intent": "approach_target",
+      "room_search_status": "target_likely",
+      "room_transition": false
+    },
+    {
+      "timestamp_ms": 1783836464799,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00002",
+      "frame_index": 32,
+      "source": "voca_post_go_pose",
+      "latest_node_to_robot": {
+        "dx_m": 1.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836464799,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 32,
+      "source": "node_created_identity_anchor",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836464799,
+      "event_type": "add_node",
+      "node_id": "n_00003",
+      "frame_index": 32,
+      "image_ref": false
+    },
+    {
+      "timestamp_ms": 1783836464799,
+      "event_type": "add_or_update_edge",
+      "edge_id": "e_00003",
+      "src": "n_00002",
+      "dst": "n_00003",
+      "status": "success",
+      "frame_index": 32
+    },
+    {
+      "timestamp_ms": 1783836464799,
+      "event_type": "add_or_update_edge",
+      "edge_id": "e_00004",
+      "src": "n_00003",
+      "dst": "n_00002",
+      "status": "success",
+      "frame_index": 32
+    },
+    {
+      "timestamp_ms": 1783836464893,
+      "event_type": "add_keyframe",
+      "node_id": "n_00003",
+      "keyframe_id": "kf_00004",
+      "frame_index": 32
+    },
+    {
+      "timestamp_ms": 1783836464893,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 32,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.0,
+        "dy_m": 0.0,
+        "dyaw_deg": 0.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836477352,
+      "event_type": "update_object_belief",
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "seen_target": true
+    },
+    {
+      "timestamp_ms": 1783836477352,
+      "event_type": "voca_verified_target_evidence",
+      "updated": true,
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "frame_index": 32,
+      "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0003_marked_view_00.jpg",
+      "position_xyz": [
+        6.211851119995117,
+        0.046541884541511536,
+        -4.438196182250977
+      ],
+      "heading_rad": -0.12067734294215923,
+      "target_view_relative_heading_deg": 0.0,
+      "target_bearing_robot_deg": 22.5,
+      "target_bearing_world_rad": 0.272022,
+      "candidate_count": 1,
+      "verification_source": "dedicated_stop_identity_critic"
+    },
+    {
+      "timestamp_ms": 1783836477353,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00003",
+      "frame_index": 32,
+      "previous_room": "unknown",
+      "current_room": "unknown",
+      "target_evidence": "possible",
+      "navigation_intent": "approach_target",
+      "room_search_status": "target_likely",
+      "room_transition": false
+    },
+    {
+      "timestamp_ms": 1783836478339,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 40,
+      "source": "voca_post_go_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.5,
+        "dy_m": 0.0,
+        "dyaw_deg": 30.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836478434,
+      "event_type": "add_keyframe",
+      "node_id": "n_00003",
+      "keyframe_id": "kf_00005",
+      "frame_index": 40
+    },
+    {
+      "timestamp_ms": 1783836478434,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 40,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.5,
+        "dy_m": 0.0,
+        "dyaw_deg": 30.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836487331,
+      "event_type": "update_object_belief",
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "seen_target": true
+    },
+    {
+      "timestamp_ms": 1783836487331,
+      "event_type": "voca_verified_target_evidence",
+      "updated": true,
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "frame_index": 40,
+      "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0004_marked_view_00.jpg",
+      "position_xyz": [
+        6.70821475982666,
+        0.11238974332809448,
+        -4.498388290405273
+      ],
+      "heading_rad": 0.4029214271697063,
+      "target_view_relative_heading_deg": 0.0,
+      "target_bearing_robot_deg": 9.0,
+      "target_bearing_world_rad": 0.560001,
+      "candidate_count": 2,
+      "verification_source": "dedicated_stop_identity_critic"
+    },
+    {
+      "timestamp_ms": 1783836487332,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00003",
+      "frame_index": 40,
+      "previous_room": "unknown",
+      "current_room": "unknown",
+      "target_evidence": "possible",
+      "navigation_intent": "approach_target",
+      "room_search_status": "target_likely",
+      "room_transition": false
+    },
+    {
+      "timestamp_ms": 1783836488041,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 46,
+      "source": "voca_post_go_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.7165,
+        "dy_m": 0.125,
+        "dyaw_deg": 30.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836488135,
+      "event_type": "add_keyframe",
+      "node_id": "n_00003",
+      "keyframe_id": "kf_00006",
+      "frame_index": 46
+    },
+    {
+      "timestamp_ms": 1783836488135,
+      "event_type": "update_live_pose_relation",
+      "node_id": "n_00003",
+      "frame_index": 46,
+      "source": "voca_runtime_pose",
+      "latest_node_to_robot": {
+        "dx_m": 0.7165,
+        "dy_m": 0.125,
+        "dyaw_deg": 30.0,
+        "covariance_diag": [
+          0.05,
+          0.05,
+          4.0
+        ]
+      }
+    },
+    {
+      "timestamp_ms": 1783836496673,
+      "event_type": "update_object_belief",
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "seen_target": true
+    },
+    {
+      "timestamp_ms": 1783836496673,
+      "event_type": "voca_verified_target_evidence",
+      "updated": true,
+      "node_id": "n_00003",
+      "target_object": "houseplant",
+      "frame_index": 46,
+      "image_ref": "${VOCA_ROOT}/outputs/stage10_final_v3_3ep_32b_awq_20260712/trajectories/trajectory_1/qwen_vlm_images/call_0005_marked_view_00.jpg",
+      "position_xyz": [
+        6.938194751739502,
+        0.14993298053741455,
+        -4.40036153793335
+      ],
+      "heading_rad": 0.4029214271697063,
+      "target_view_relative_heading_deg": 0.0,
+      "target_bearing_robot_deg": 4.5,
+      "target_bearing_world_rad": 0.481461,
+      "candidate_count": 3,
+      "verification_source": "dedicated_stop_identity_critic"
+    },
+    {
+      "timestamp_ms": 1783836496673,
+      "event_type": "supervisor_mode_transition",
+      "previous_mode": "goal_seek",
+      "next_mode": "verify_target",
+      "reason": "proactive_target_stop_verified"
+    },
+    {
+      "timestamp_ms": 1783836496673,
+      "event_type": "voca_semantic_state_update",
+      "node_id": "n_00003",
+      "frame_index": 46,
+      "previous_room": "unknown",
+      "current_room": "unknown",
+      "target_evidence": "confirmed",
+      "navigation_intent": "verify_target",
+      "room_search_status": "target_found",
+      "room_transition": false
+    }
+  ]
+}

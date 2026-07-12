@@ -1,0 +1,19 @@
+[
+  {
+    "candidate_gate_pass_rate": 1.0,
+    "case_count": 3,
+    "completion_tokens_mean": 1168.222,
+    "endpoint": "server02_8b_thinking_awq",
+    "json_success_rate": 1.0,
+    "latency_mean_sec": 5.19619,
+    "latency_median_sec": 5.300403,
+    "latency_p95_sec": 6.08543,
+    "measured_calls": 9,
+    "model": "qwen3-vl-8b-thinking-awq-4bit",
+    "pipeline_accept_rate": 0.666667,
+    "prompt_tokens_mean": 5232.333,
+    "risky_point_rate": 0.333333,
+    "schema_success_rate": 1.0,
+    "timeout_or_error_rate": 0.0
+  }
+]

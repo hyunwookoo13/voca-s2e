@@ -220,7 +220,7 @@ def _render_docmost(summary: dict[str, Any]) -> str:
             "## 5. Recommended Runtime Env",
             "",
             "```bash",
-            'export QWEN_BASE_URL="http://server-01.cgv:8000/v1"',
+            'export QWEN_BASE_URL="http://localhost:8000/v1"',
             'export QWEN_API_KEY="EMPTY"',
             'export PIXELNAV_DEVICE="cpu"',
             'export QWEN_MODEL="qwen3-vl-32b-thinking"',

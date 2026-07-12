@@ -14,7 +14,7 @@ Implemented after design review:
 9. Pose graph optimization explicitly deferred as TODO
 ```
 
-The schema envelope remains `nav_vlm_waypoint_v1`; memory context is extended to `nav_memory_context_v4`.
+The schema envelope remains `nav_vlm_waypoint_v1`; the current v5 runtime memory context is `nav_memory_context_v5`.
 
 
 Note: v0.3 adds runtime current-pose relation to the latest node and robot-frame exit scoring.

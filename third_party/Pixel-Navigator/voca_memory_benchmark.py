@@ -26,13 +26,37 @@ PIXELNAV_ACTION_NAMES = {
 }
 
 
-def ensure_voca_imports(voca_root: str | Path = DEFAULT_VOCA_ROOT) -> None:
+def normalize_memory_framework(memory_framework: str | None = None) -> str:
+    """Normalize a VOCA memory framework selector to v5/v6."""
+    raw = str(memory_framework or os.getenv("VOCA_MEMORY_FRAMEWORK") or "v5").strip()
+    aliases = {
+        "5": "v5",
+        "v5": "v5",
+        "qwen_nav_memory_framework_v5": "v5",
+        "6": "v6",
+        "v6": "v6",
+        "qwen_nav_memory_framework_v6": "v6",
+    }
+    key = raw.lower()
+    if key not in aliases:
+        raise ValueError(f"unsupported VOCA memory framework: {raw}")
+    return aliases[key]
+
+
+def ensure_voca_imports(
+    voca_root: str | Path = DEFAULT_VOCA_ROOT,
+    *,
+    memory_framework: str | None = None,
+) -> None:
     """Expose VOCA memory packages without requiring installation."""
     root = Path(voca_root)
-    qwen_root = root / "qwen_nav_memory_framework_v5"
+    framework = normalize_memory_framework(memory_framework)
+    qwen_root = root / f"qwen_nav_memory_framework_{framework}"
     for path in (root, qwen_root):
         path_str = str(path)
-        if path.exists() and path_str not in sys.path:
+        if path.exists() and path_str in sys.path:
+            sys.path.remove(path_str)
+        if path.exists():
             sys.path.insert(0, path_str)
 
 
@@ -51,6 +75,7 @@ class BenchmarkRunConfig:
     video_fps: int = 4
     memory_video_fps: int = 2
     voca_root: Path = DEFAULT_VOCA_ROOT
+    memory_framework: str = "v5"
 
 
 class EpisodeVideoRecorder:
@@ -124,8 +149,9 @@ class HabitatEnvMemoryBackend:
         max_env_steps: int | None = None,
         video_recorder: EpisodeVideoRecorder | None = None,
         voca_root: str | Path = DEFAULT_VOCA_ROOT,
+        memory_framework: str | None = None,
     ):
-        ensure_voca_imports(voca_root)
+        ensure_voca_imports(voca_root, memory_framework=memory_framework)
         self.env = env
         self._last_obs = dict(initial_obs)
         self.output_dir = Path(output_dir)
@@ -443,8 +469,15 @@ class FallbackVLMClient:
 class PixelNavFriendlyHeuristicVLMClient:
     """Heuristic VLM with a goal point ratio that matches PixelNav rollouts better."""
 
-    def __init__(self, base: Any | None = None, *, y_ratio: float = 0.625, voca_root: str | Path = DEFAULT_VOCA_ROOT):
-        ensure_voca_imports(voca_root)
+    def __init__(
+        self,
+        base: Any | None = None,
+        *,
+        y_ratio: float = 0.625,
+        voca_root: str | Path = DEFAULT_VOCA_ROOT,
+        memory_framework: str | None = None,
+    ):
+        ensure_voca_imports(voca_root, memory_framework=memory_framework)
         if base is None:
             from nav_memory_qwen.vlm_client import HeuristicVLMClient
 
@@ -487,13 +520,18 @@ class PointNavBearingHeuristicVLMClient:
         stop_distance_m: float = 0.2,
         fallback: Any | None = None,
         voca_root: str | Path = DEFAULT_VOCA_ROOT,
+        memory_framework: str | None = None,
     ):
-        ensure_voca_imports(voca_root)
+        ensure_voca_imports(voca_root, memory_framework=memory_framework)
         self.y_ratio = float(y_ratio)
         self.rotate_threshold_deg = float(rotate_threshold_deg)
         self.max_rotate_deg = float(max_rotate_deg)
         self.stop_distance_m = float(stop_distance_m)
-        self.fallback = fallback or PixelNavFriendlyHeuristicVLMClient(y_ratio=y_ratio, voca_root=voca_root)
+        self.fallback = fallback or PixelNavFriendlyHeuristicVLMClient(
+            y_ratio=y_ratio,
+            voca_root=voca_root,
+            memory_framework=memory_framework,
+        )
         self.collision_recovery_turn_index = 0
         self.collision_recovery_forward_steps = 0
 
@@ -521,9 +559,24 @@ class PointNavBearingHeuristicVLMClient:
         )
         u = width // 2
         v = max(0, min(height - 1, int(round(height * self.y_ratio))))
+        memory = vlm_input.get("memory", {}) if isinstance(vlm_input.get("memory"), dict) else {}
+
+        def safe_candidate_ref_for_view(view_type: str) -> str | None:
+            candidates = list((memory.get("candidate_refs", {}) or {}).get("exits", []) or [])
+            candidates.extend(list((memory.get("local_topology", {}) or {}).get("candidate_exits", []) or []))
+            safe = [
+                cand for cand in candidates
+                if cand.get("candidate_ref")
+                and not bool(cand.get("avoid", False))
+                and str(cand.get("view_type_hint") or view_type) == view_type
+            ]
+            if not safe:
+                return None
+            safe.sort(key=lambda cand: float(cand.get("score", 0.0) or 0.0), reverse=True)
+            return str(safe[0]["candidate_ref"])
 
         def make_front_go(short_text: str, confidence: str = "medium") -> dict[str, Any]:
-            return make_go_output(
+            output = make_go_output(
                 view_id=int(front_view.get("view_id", 0)),
                 view_type="front",
                 point_px=(u, v),
@@ -534,8 +587,11 @@ class PointNavBearingHeuristicVLMClient:
                 short_text=short_text,
                 confidence=confidence,
             )
+            candidate_ref = safe_candidate_ref_for_view("front")
+            if candidate_ref:
+                output["selected_candidate_ref"] = candidate_ref
+            return output
 
-        memory = vlm_input.get("memory", {}) if isinstance(vlm_input.get("memory"), dict) else {}
         runtime_state = memory.get("runtime_state", {}) if isinstance(memory.get("runtime_state"), dict) else {}
         last_outcome = (
             runtime_state.get("last_action_outcome", {})
@@ -704,8 +760,10 @@ def run_objnav_memory_benchmark(
     video_fps: int = 4,
     memory_video_fps: int = 2,
     voca_root: str | Path = DEFAULT_VOCA_ROOT,
+    memory_framework: str | None = None,
 ) -> dict[str, Any]:
-    ensure_voca_imports(voca_root)
+    framework = normalize_memory_framework(memory_framework)
+    ensure_voca_imports(voca_root, memory_framework=framework)
     from nav_memory_qwen.agent import NavAgentConfig, NavMemoryAgent
 
     output_dir = Path(output_dir)
@@ -736,6 +794,7 @@ def run_objnav_memory_benchmark(
             max_env_steps=max_env_steps,
             video_recorder=video_recorder,
             voca_root=voca_root,
+            memory_framework=memory_framework,
         )
         vlm_client = vlm_client_factory()
         agent = NavMemoryAgent(
@@ -769,6 +828,7 @@ def run_objnav_memory_benchmark(
                 episode_dir,
                 fps=memory_video_fps,
                 voca_root=voca_root,
+                memory_framework=memory_framework,
             )
         video_recorder.close()
         video_artifacts = video_recorder.artifacts()
@@ -779,6 +839,7 @@ def run_objnav_memory_benchmark(
         final_distance_to_goal = _metric_float(metrics, "distance_to_goal")
         record = {
             "episode_index": episode_index,
+            "memory_framework": framework,
             "episode_id": episode_id,
             "scene_id": scene_id,
             "target_object": target_object,
@@ -830,8 +891,10 @@ def run_pointnav_memory_benchmark(
     memory_video_fps: int = 2,
     pointnav_goal_source: str = "sensor",
     voca_root: str | Path = DEFAULT_VOCA_ROOT,
+    memory_framework: str | None = None,
 ) -> dict[str, Any]:
-    ensure_voca_imports(voca_root)
+    framework = normalize_memory_framework(memory_framework)
+    ensure_voca_imports(voca_root, memory_framework=framework)
     from nav_memory_qwen.agent import NavAgentConfig, NavMemoryAgent
 
     output_dir = Path(output_dir)
@@ -863,6 +926,7 @@ def run_pointnav_memory_benchmark(
             max_env_steps=max_env_steps,
             video_recorder=video_recorder,
             voca_root=voca_root,
+            memory_framework=memory_framework,
         )
         if hasattr(backend.pixelnav_policy, "set_goal_position"):
             backend.pixelnav_policy.set_goal_position(goal_position)
@@ -913,6 +977,7 @@ def run_pointnav_memory_benchmark(
                 episode_dir,
                 fps=memory_video_fps,
                 voca_root=voca_root,
+                memory_framework=memory_framework,
             )
         video_recorder.close()
         video_artifacts = video_recorder.artifacts()
@@ -923,6 +988,7 @@ def run_pointnav_memory_benchmark(
         final_distance_to_goal = _metric_float(metrics, "distance_to_goal")
         record = {
             "episode_index": episode_index,
+            "memory_framework": framework,
             "episode_id": episode_id,
             "scene_id": scene_id,
             "goal_position_xyz": _float_list(goal_position),
@@ -968,6 +1034,7 @@ def write_benchmark_summary(
     episodes = list(records)
     aggregate = {
         "episodes": len(episodes),
+        "memory_frameworks": sorted({str(record.get("memory_framework", "unknown")) for record in episodes}),
         "success": _mean(record["success"] for record in episodes),
         "spl": _mean(record["spl"] for record in episodes),
         "soft_spl": _mean(record["soft_spl"] for record in episodes),
@@ -1156,27 +1223,42 @@ def make_vlm_client_factory(
     *,
     y_ratio: float = 0.625,
     bearing_rotate_threshold_deg: float = 25.0,
+    memory_framework: str | None = None,
 ) -> Callable[[], Any]:
-    ensure_voca_imports(voca_root)
+    ensure_voca_imports(voca_root, memory_framework=memory_framework)
     if kind == "heuristic":
-        return lambda: PixelNavFriendlyHeuristicVLMClient(y_ratio=y_ratio, voca_root=voca_root)
+        return lambda: PixelNavFriendlyHeuristicVLMClient(
+            y_ratio=y_ratio,
+            voca_root=voca_root,
+            memory_framework=memory_framework,
+        )
     if kind == "pointnav-bearing":
         return lambda: PointNavBearingHeuristicVLMClient(
             y_ratio=y_ratio,
             rotate_threshold_deg=bearing_rotate_threshold_deg,
             voca_root=voca_root,
+            memory_framework=memory_framework,
         )
     if kind == "qwen":
         from nav_memory_qwen.vlm_client import OpenAICompatibleVLMClient
 
         return lambda: FallbackVLMClient(
             OpenAICompatibleVLMClient.from_env(),
-            PixelNavFriendlyHeuristicVLMClient(y_ratio=y_ratio, voca_root=voca_root),
+            PixelNavFriendlyHeuristicVLMClient(
+                y_ratio=y_ratio,
+                voca_root=voca_root,
+                memory_framework=memory_framework,
+            ),
         )
     raise ValueError(f"unsupported vlm client kind: {kind}")
 
 
-def run_dry_run_fake_env(output_dir: str | Path, *, task: str = "objnav") -> dict[str, Any]:
+def run_dry_run_fake_env(
+    output_dir: str | Path,
+    *,
+    task: str = "objnav",
+    memory_framework: str | None = None,
+) -> dict[str, Any]:
     env = _DryRunHabitatEnv()
     kwargs = {
         "env": env,
@@ -1188,6 +1270,7 @@ def run_dry_run_fake_env(output_dir: str | Path, *, task: str = "objnav") -> dic
         "pixelnav_policy_factory": _DryRunPixelPolicy,
         "vlm_client_factory": _DryRunVLM,
         "force_front_view_waypoint": True,
+        "memory_framework": memory_framework,
     }
     if task in {"pointnav", "pointnav-test"}:
         env.current_episode = _DryRunPointNavEpisode()
@@ -1220,11 +1303,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video-fps", type=int, default=4)
     parser.add_argument("--memory-video-fps", type=int, default=2)
     parser.add_argument("--voca-root", default=str(DEFAULT_VOCA_ROOT))
+    parser.add_argument(
+        "--memory-framework",
+        choices=["v5", "v6"],
+        default=os.getenv("VOCA_MEMORY_FRAMEWORK", "v5"),
+        help="VOCA memory framework version for ablation. Default: v5.",
+    )
     parser.add_argument("--dry-run-fake-env", action="store_true")
     args = parser.parse_args(argv)
 
     if args.dry_run_fake_env:
-        result = run_dry_run_fake_env(args.out, task=args.task)
+        result = run_dry_run_fake_env(args.out, task=args.task, memory_framework=args.memory_framework)
     else:
         if args.task == "pointnav-test":
             env = create_official_pointnav_test_env(args.eval_episodes)
@@ -1245,6 +1334,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.voca_root,
                     y_ratio=args.heuristic_y_ratio,
                     bearing_rotate_threshold_deg=args.bearing_rotate_threshold_deg,
+                    memory_framework=args.memory_framework,
                 ),
                 success_distance_m=args.success_distance_m if args.success_distance_m is not None else 0.2,
                 write_videos=args.write_videos,
@@ -1252,6 +1342,7 @@ def main(argv: list[str] | None = None) -> int:
                 memory_video_fps=args.memory_video_fps,
                 pointnav_goal_source=args.pointnav_goal_source,
                 voca_root=args.voca_root,
+                memory_framework=args.memory_framework,
             )
         elif args.task == "pointnav":
             env = create_official_pointnav_env(args.dataset, args.eval_episodes)
@@ -1272,6 +1363,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.voca_root,
                     y_ratio=args.heuristic_y_ratio,
                     bearing_rotate_threshold_deg=args.bearing_rotate_threshold_deg,
+                    memory_framework=args.memory_framework,
                 ),
                 success_distance_m=args.success_distance_m if args.success_distance_m is not None else 0.2,
                 write_videos=args.write_videos,
@@ -1279,6 +1371,7 @@ def main(argv: list[str] | None = None) -> int:
                 memory_video_fps=args.memory_video_fps,
                 pointnav_goal_source=args.pointnav_goal_source,
                 voca_root=args.voca_root,
+                memory_framework=args.memory_framework,
             )
         else:
             env = create_official_objnav_env(args.dataset, args.eval_episodes)
@@ -1299,12 +1392,14 @@ def main(argv: list[str] | None = None) -> int:
                     args.voca_root,
                     y_ratio=args.heuristic_y_ratio,
                     bearing_rotate_threshold_deg=args.bearing_rotate_threshold_deg,
+                    memory_framework=args.memory_framework,
                 ),
                 success_distance_m=args.success_distance_m if args.success_distance_m is not None else 1.0,
                 write_videos=args.write_videos,
                 video_fps=args.video_fps,
                 memory_video_fps=args.memory_video_fps,
                 voca_root=args.voca_root,
+                memory_framework=args.memory_framework,
             )
         close = getattr(env, "close", None)
         if callable(close):
@@ -1316,6 +1411,7 @@ def main(argv: list[str] | None = None) -> int:
 def _write_metrics_csv(path: Path, episodes: list[dict[str, Any]]) -> None:
     fieldnames = [
         "episode_index",
+        "memory_framework",
         "episode_id",
         "scene_id",
         "target_object",
@@ -1462,8 +1558,9 @@ def _render_memory_graph_video_artifact(
     *,
     fps: int = 2,
     voca_root: str | Path = DEFAULT_VOCA_ROOT,
+    memory_framework: str | None = None,
 ) -> dict[str, Any]:
-    ensure_voca_imports(voca_root)
+    ensure_voca_imports(voca_root, memory_framework=memory_framework)
     from goal_adapter.memory_graph_visualizer import render_memory_graph_video
 
     return render_memory_graph_video(
