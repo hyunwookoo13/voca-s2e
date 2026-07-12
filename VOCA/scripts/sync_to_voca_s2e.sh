@@ -34,6 +34,7 @@ RSYNC_ARGS=(
   --delete
   --itemize-changes
   --omit-dir-times
+  --no-times
   --exclude=/.git/
   --exclude=/.env
   --exclude=/data
@@ -56,11 +57,12 @@ MEMORY_RSYNC_ARGS=(
   --delete
   --itemize-changes
   --omit-dir-times
+  --no-times
   --exclude=__pycache__/
   --exclude='*.pyc'
 )
 
-FILE_RSYNC_ARGS=(--archive --checksum --itemize-changes)
+FILE_RSYNC_ARGS=(--archive --checksum --itemize-changes --no-times)
 if (( DRY_RUN )); then
   RSYNC_ARGS+=(--dry-run)
   MEMORY_RSYNC_ARGS+=(--dry-run)
